@@ -11,7 +11,7 @@ From Albert Rapp on [Github](https://3mw.albert-rapp.de/p/automate-anything-with
 ```{r}
 #| echo: false
 current_time <- Sys.time() |> 
-  format('%d/%m/%Y')
+  format('%d/%m/%Y %H%M')
 ```
 
 Hello, this file was rendered at `r current_time`
