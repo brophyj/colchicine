@@ -9,4 +9,4 @@ current_time <- Sys.time() |>
   format('%d/%m/%Y %H%M')
 ```
 
-Hello, this file was rendered at `r current_time`
+Hello, this file was rendered at `r current_time`.
