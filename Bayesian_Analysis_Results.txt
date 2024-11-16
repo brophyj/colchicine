@@ -1,0 +1,2 @@
+Risk Difference: 0.13 [95% CrI: 0.05, 0.22]
+Relative Risk: 2.39 [95% CrI: 1.36, 4.07]
