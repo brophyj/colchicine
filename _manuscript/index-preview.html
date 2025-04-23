@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+    <meta charset="utf-8">
+    <meta name="generator" content="quarto-1.6.36">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+    <meta name="author" content="Jay Brophy">
+    <meta name="dcterms.date" content="2025-04-23">
+
+    <title>The trials of interpreting clinical trials - A Bayesian perspective</title>
+    <style>
+      code{white-space: pre-wrap;}
+      span.smallcaps{font-variant: small-caps;}
+      div.columns{display: flex; gap: min(4vw, 1.5em);}
+      div.column{flex: auto; overflow-x: auto;}
+      div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+      ul.task-list{list-style: none;}
+      ul.task-list li input[type="checkbox"] {
+        width: 0.8em;
+        margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+        vertical-align: middle;
+      }
+      /* CSS for syntax highlighting */
+      pre > code.sourceCode { white-space: pre; position: relative; }
+      pre > code.sourceCode > span { line-height: 1.25; }
+      pre > code.sourceCode > span:empty { height: 1.2em; }
+      .sourceCode { overflow: visible; }
+      code.sourceCode > span { color: inherit; text-decoration: inherit; }
+      div.sourceCode { margin: 1em 0; }
+      pre.sourceCode { margin: 0; }
+      @media screen {
+      div.sourceCode { overflow: auto; }
+      }
+      @media print {
+      pre > code.sourceCode { white-space: pre-wrap; }
+      pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+      }
+      pre.numberSource code
+        { counter-reset: source-line 0; }
+      pre.numberSource code > span
+        { position: relative; left: -4em; counter-increment: source-line; }
+      pre.numberSource code > span > a:first-child::before
+        { content: counter(source-line);
+          position: relative; left: -1em; text-align: right; vertical-align: baseline;
+          border: none; display: inline-block;
+          -webkit-touch-callout: none; -webkit-user-select: none;
+          -khtml-user-select: none; -moz-user-select: none;
+          -ms-user-select: none; user-select: none;
+          padding: 0 4px; width: 4em;
+        }
+      pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+      div.sourceCode
+        {   }
+      @media screen {
+      pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+      }
+      /* CSS for citations */
+      div.csl-bib-body { }
+      div.csl-entry {
+        clear: both;
+      }
+      .hanging-indent div.csl-entry {
+        margin-left:2em;
+        text-indent:-2em;
+      }
+      div.csl-left-margin {
+        min-width:2em;
+        float:left;
+      }
+      div.csl-right-inline {
+        margin-left:2em;
+        padding-left:1em;
+      }
+      div.csl-indent {
+        margin-left: 2em;
+      }    </style>
+
+    <style>
+      body.hypothesis-enabled #quarto-embed-header {
+        padding-right: 36px;
+      }
+
+      #quarto-embed-header {
+        height: 3em;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: solid 1px;
+      }
+
+      #quarto-embed-header h6 {
+        font-size: 1.1em;
+        padding-top: 0.6em;
+        margin-left: 1em;
+        margin-right: 1em;
+        font-weight: 400;
+      }
+
+      #quarto-embed-header a.quarto-back-link,
+      #quarto-embed-header a.quarto-download-embed {
+        font-size: 0.8em;
+        margin-top: 1em;
+        margin-bottom: 1em;
+        margin-left: 1em;
+        margin-right: 1em;
+      }
+
+      .quarto-back-container {
+        padding-left: 0.5em;
+        display: flex;
+      }
+
+      .headroom {
+          will-change: transform;
+          transition: transform 200ms linear;
+      }
+
+      .headroom--pinned {
+          transform: translateY(0%);
+      }
+
+      .headroom--unpinned {
+          transform: translateY(-100%);
+      }      
+    </style>
+
+    <script>
+    window.document.addEventListener("DOMContentLoaded", function () {
+
+      var header = window.document.querySelector("#quarto-embed-header");
+      const titleBannerEl = window.document.querySelector("body > #title-block-header");
+      if (titleBannerEl) {
+        titleBannerEl.style.paddingTop = header.clientHeight + "px";
+      }
+      const contentEl = window.document.getElementById('quarto-content');
+      for (const child of contentEl.children) {
+        child.style.paddingTop = header.clientHeight + "px";
+        child.style.marginTop = "1em";
+      }
+
+      // Use the article root if the `back` call doesn't work. This isn't perfect
+      // but should typically work
+      window.quartoBackToArticle = () => {
+        var currentUrl = window.location.href;
+        window.history.back();
+        setTimeout(() => {
+            // if location was not changed in 100 ms, then there is no history back
+            if(currentUrl === window.location.href){              
+                // redirect to site root
+                window.location.href = "index.html";
+            }
+        }, 100);
+      }
+
+      const headroom = new window.Headroom(header, {
+        tolerance: 5,
+        onPin: function () {
+        },
+        onUnpin: function () {
+        },
+      });
+      headroom.init();
+    });
+    </script>
+
+    
+<script src="site_libs/manuscript-notebook/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-01c78b5cd655e4cd89133cf59d535862.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-ddae12c640c633fda6ef43121ab94794.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+     <script async="" src="https://hypothes.is/embed.js"></script>
+<script>
+  window.document.addEventListener("DOMContentLoaded", function (_event) {
+    document.body.classList.add('hypothesis-enabled');
+  });
+</script>   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script> 
+        <link rel="stylesheet" href="custom.scss">
+      <meta name="citation_title" content="The trials of interpreting clinical trials - A Bayesian perspective">
+<meta name="citation_author" content="Jay Brophy">
+<meta name="citation_publication_date" content="2025-04-23">
+<meta name="citation_cover_date" content="2025-04-23">
+<meta name="citation_year" content="2025">
+<meta name="citation_online_date" content="2025-04-23">
+<meta name="citation_language" content="en">
+<meta name="citation_reference" content="citation_title=Colchicine for symptomatic coronary artery disease after percutaneous coronary intervention;,citation_author=K. L. Aw;,citation_author=A. Koh;,citation_author=H. L. Lee;,citation_author=A. Kudzinskas;,citation_author=R. De Palma;,citation_publication_date=2022;,citation_cover_date=2022;,citation_year=2022;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/34992158;,citation_issue=1;,citation_doi=10.1136/openhrt-2021-001887;,citation_volume=9;,citation_journal_title=Open Heart;">
+<meta name="citation_reference" content="citation_title=Colchicine in acute myocardial infarction;,citation_author=Sanjit S. Jolly;,citation_author=Marc-André Entremont;,citation_author=Shun Fu Lee;,citation_author=Rajibul Mian;,citation_author=Jessica Tyrwhitt;,citation_author=Sasko Kedev;,citation_author=Gilles Montalescot;,citation_author=Jan H. Cornel;,citation_author=Goran Stanković;,citation_author=Raul Moreno;,citation_author=Robert F. Storey;,citation_author=Timothy D. Henry;,citation_author=Shamir R. Mehta;,citation_author=Matthias Bossard;,citation_author=Petr Kala;,citation_author=Jamie Layland;,citation_author=Biljana Zafirovska;,citation_author=P. J. Devereaux;,citation_author=John Eikelboom;,citation_author=John A. Cairns;,citation_author=Binita Shah;,citation_author=Tej Sheth;,citation_author=Sanjib K. Sharma;,citation_author=Wadea Tarhuni;,citation_author=David Conen;,citation_author=Sarah Tawadros;,citation_author=Shahar Lavi;,citation_author=Salim Yusuf;,citation_publication_date=2025;,citation_cover_date=2025;,citation_year=2025;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/39555823;,citation_issue=7;,citation_doi=10.1056/NEJMoa2405922;,citation_volume=392;,citation_journal_title=New England Journal of Medicine;">
+<meta name="citation_reference" content="citation_title=Efficacy and safety of low-dose colchicine after myocardial infarction;,citation_author=J. C. Tardif;,citation_author=S. Kouz;,citation_author=D. D. Waters;,citation_author=O. F. Bertrand;,citation_author=R. Diaz;,citation_author=A. P. Maggioni;,citation_author=F. J. Pinto;,citation_author=R. Ibrahim;,citation_author=H. Gamra;,citation_author=G. S. Kiwan;,citation_author=C. Berry;,citation_author=J. Lopez-Sendon;,citation_author=P. Ostadal;,citation_author=W. Koenig;,citation_author=D. Angoulvant;,citation_author=J. C. Gregoire;,citation_author=M. A. Lavoie;,citation_author=M. P. Dube;,citation_author=D. Rhainds;,citation_author=M. Provencher;,citation_author=L. Blondeau;,citation_author=A. Orfanos;,citation_author=P. L. L’Allier;,citation_author=M. C. Guertin;,citation_author=F. Roubille;,citation_publication_date=2019;,citation_cover_date=2019;,citation_year=2019;,citation_issue=26;,citation_volume=381;,citation_journal_title=N Engl J Med;">
+<meta name="citation_reference" content="citation_title=Understanding Conditional Probability and Bayes’ Theorem;,citation_author=Sachin Date;,citation_publication_date=2024-07-18;,citation_cover_date=2024-07-18;,citation_year=2024;,citation_fulltext_html_url=https://towardsdatascience.com/understanding-conditional-probability-and-bayes-theorem-b779f8801ef6;,citation_language=en;">
+<meta name="citation_reference" content="citation_title=Colchicine goes belly-up in a more definitive heart attack trial;,citation_author=Nicole Lou;,citation_publication_date=2024;,citation_cover_date=2024;,citation_year=2024;,citation_fulltext_html_url=https://www.medpagetoday.com/meetingcoverage/tct/112644?xid=nl_mpt_Cardiology_update_2024-11-01&amp;amp;amp;mh=5ea0ef63b494fbd59d59b80f4d7177fa&amp;zdee=gAAAAABm4utWmSHJnY-b0PoghpwIdJ2Z5bp7pHCJbHd4lnSWdd-TcQH64qhAqr5vStSuTwshVLoWZmIfruyxrtdHQaON6GGWin0MsBBlzSgmQd4CbqGcFWQ%3D&amp;utm_source=Sailthru&amp;utm_medium=email&amp;utm_campaign=Automated%20Specialty%20Update%20Cardiology%20BiWeekly%20FRIDAY%202024-11-01&amp;utm_term=NL_Spec_Cardiology_Update_Active;">
+<meta name="citation_reference" content="citation_title=Long-term colchicine for the prevention of vascular recurrent events in non-cardioembolic stroke (CONVINCE): A randomised controlled trial;,citation_author=P. Kelly;,citation_author=R. Lemmens;,citation_author=C. Weimar;,citation_author=C. Walsh;,citation_author=F. Purroy;,citation_author=M. Barber;,citation_author=R. Collins;,citation_author=S. Cronin;,citation_author=A. Czlonkowska;,citation_author=P. Desfontaines;,citation_author=A. De Pauw;,citation_author=N. R. Evans;,citation_author=U. Fischer;,citation_author=C. Fonseca;,citation_author=J. Forbes;,citation_author=M. D. Hill;,citation_author=D. Jatuzis;,citation_author=J. Korv;,citation_author=P. Kraft;,citation_author=C. Kruuse;,citation_author=C. Lynch;,citation_author=D. McCabe;,citation_author=R. Mikulik;,citation_author=S. Murphy;,citation_author=P. Nederkoorn;,citation_author=M. O’Donnell;,citation_author=P. Sandercock;,citation_author=B. Schroeder;,citation_author=G. Shim;,citation_author=K. Tobin;,citation_author=D. J. Williams;,citation_author=C. Price;,citation_publication_date=2024;,citation_cover_date=2024;,citation_year=2024;,citation_volume=404;,citation_journal_title=Lancet;">
+<meta name="citation_reference" content="citation_title=Colchicine in patients with acute ischaemic stroke or transient ischaemic attack (CHANCE-3): Multicentre, double blind, randomised, placebo controlled trial;,citation_author=J. Li;,citation_author=X. Meng;,citation_author=F. D. Shi;,citation_author=J. Jing;,citation_author=H. Q. Gu;,citation_author=A. Jin;,citation_author=Y. Jiang;,citation_author=H. Li;,citation_author=S. C. Johnston;,citation_author=G. J. Hankey;,citation_author=J. D. Easton;,citation_author=L. Chang;,citation_author=P. Shi;,citation_author=L. Wang;,citation_author=X. Zhuang;,citation_author=H. Li;,citation_author=Y. Zang;,citation_author=J. Zhang;,citation_author=Z. Sun;,citation_author=D. Liu;,citation_author=Y. Li;,citation_author=H. Yang;,citation_author=J. Zhao;,citation_author=W. Yu;,citation_author=A. Wang;,citation_author=Y. Pan;,citation_author=J. Lin;,citation_author=X. Xie;,citation_author=W. N. Jin;,citation_author=S. Li;,citation_author=S. Niu;,citation_author=Y. Wang;,citation_author=X. Zhao;,citation_author=Z. Li;,citation_author=L. Liu;,citation_author=H. Zheng;,citation_author=Y. Wang;,citation_author=Chance- Investigators;,citation_publication_date=2024;,citation_cover_date=2024;,citation_year=2024;,citation_volume=385;,citation_journal_title=BMJ;">
+<meta name="citation_reference" content="citation_title=Moving to a world beyond “p &amp;amp;amp;lt; 0.05”;,citation_author=RL. Wasserstein;,citation_author=AL. Schirm;,citation_author=NA. Lazar;,citation_publication_date=2019;,citation_cover_date=2019;,citation_year=2019;,citation_volume=73;,citation_journal_title=The American Statistician;">
+<meta name="citation_reference" content="citation_title=The ASA’s statement on p-values: Context, process, and purpose;,citation_author=RL. Wasserstein;,citation_author=NA. Lazar;,citation_publication_date=2016;,citation_cover_date=2016;,citation_year=2016;,citation_volume=70:2;,citation_journal_title=The American Statistician;">
+<meta name="citation_reference" content="citation_title=Statistical tests, p values, confidence intervals, and power: A guide to misinterpretations;,citation_author=Sander Greenland;,citation_author=Stephen J. Senn;,citation_author=Kenneth J. Rothman;,citation_author=John B. Carlin;,citation_author=Charles Poole;,citation_author=Steven N. Goodman;,citation_author=Douglas G. Altman;,citation_publication_date=2016;,citation_cover_date=2016;,citation_year=2016;,citation_issue=4;,citation_volume=31;,citation_journal_title=European journal of epidemiology;">
+<meta name="citation_reference" content="citation_title=The difference between significant and not significant is not itself statistically significant;,citation_author=A. Gelman;,citation_author=HS. Stern;,citation_publication_date=2006;,citation_cover_date=2006;,citation_year=2006;,citation_issue=4;,citation_volume=60;,citation_journal_title=The American Statistician;">
+<meta name="citation_reference" content="citation_title=Bayesian analyses of cardiovascular trials—bringing added value to the table;,citation_author=James M Brophy;,citation_publication_date=2021;,citation_cover_date=2021;,citation_year=2021;,citation_issue=9;,citation_issn=0828-282X;,citation_volume=37;,citation_journal_title=Canadian Journal of Cardiology;">
+<meta name="citation_reference" content="citation_author=E. Zwet;,citation_author=W. Wi!cek;,citation_author=A. Gelman;,citation_publication_date=2024;,citation_cover_date=2024;,citation_year=2024;,citation_fulltext_html_url=chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://stat.columbia.edu/~gelman/research/unpublished/Meta_analysis_with_a_single_trial.pdf;">
+<meta name="citation_reference" content="citation_title=Interaction revisited: The difference between two estimates;,citation_author=D. G. Altman;,citation_author=J. M. Bland;,citation_publication_date=2003;,citation_cover_date=2003;,citation_year=2003;,citation_issue=7382;,citation_volume=326;,citation_journal_title=BMJ;">
+<meta name="citation_reference" content="citation_title=CONSORT 2010 explanation and elaboration: Updated guidelines for reporting parallel group randomised trials;,citation_author=D. Moher;,citation_author=S. Hopewell;,citation_author=K. F. Schulz;,citation_author=V. Montori;,citation_author=P. C. Gotzsche;,citation_author=P. J. Devereaux;,citation_author=D. Elbourne;,citation_author=M. Egger;,citation_author=D. G. Altman;,citation_publication_date=2010;,citation_cover_date=2010;,citation_year=2010;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/20332511;,citation_doi=10.1136/bmj.c869;,citation_volume=340;,citation_journal_title=BMJ;">
+<meta name="citation_reference" content="citation_title=The PRISMA 2020 statement: An updated guideline for reporting systematic reviews;,citation_author=M. J. Page;,citation_author=J. E. McKenzie;,citation_author=P. M. Bossuyt;,citation_author=I. Boutron;,citation_author=T. C. Hoffmann;,citation_author=C. D. Mulrow;,citation_author=L. Shamseer;,citation_author=J. M. Tetzlaff;,citation_author=E. A. Akl;,citation_author=S. E. Brennan;,citation_author=R. Chou;,citation_author=J. Glanville;,citation_author=J. M. Grimshaw;,citation_author=A. Hrobjartsson;,citation_author=M. M. Lalu;,citation_author=T. Li;,citation_author=E. W. Loder;,citation_author=E. Mayo-Wilson;,citation_author=S. McDonald;,citation_author=L. A. McGuinness;,citation_author=L. A. Stewart;,citation_author=J. Thomas;,citation_author=A. C. Tricco;,citation_author=V. A. Welch;,citation_author=P. Whiting;,citation_author=D. Moher;,citation_publication_date=2021;,citation_cover_date=2021;,citation_year=2021;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/33782057;,citation_doi=10.1136/bmj.n71;,citation_volume=372;,citation_journal_title=BMJ;">
+<meta name="citation_reference" content="citation_title=Users’ guides to the medical literature. II. How to use an article about therapy or prevention. B. What were the results and will they help me in caring for my patients? Evidence-based medicine working group;,citation_author=G. H. Guyatt;,citation_author=D. L. Sackett;,citation_author=D. J. Cook;,citation_publication_date=1994;,citation_cover_date=1994;,citation_year=1994;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/8258890;,citation_issue=1;,citation_doi=10.1001/jama.271.1.59;,citation_volume=271;,citation_journal_title=JAMA;">
+<meta name="citation_reference" content="citation_title=Why most published research findings are false;,citation_author=J. P. Ioannidis;,citation_publication_date=2005;,citation_cover_date=2005;,citation_year=2005;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/16060722;,citation_issue=8;,citation_doi=10.1371/journal.pmed.0020124;,citation_volume=2;,citation_journal_title=PLoS Med;">
+<meta name="citation_reference" content="citation_title=Statistically significant meta-analyses of clinical trials have modest credibility and inflated effects;,citation_author=T. V. Pereira;,citation_author=J. P. Ioannidis;,citation_publication_date=2011;,citation_cover_date=2011;,citation_year=2011;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/21454050;,citation_issue=10;,citation_doi=10.1016/j.jclinepi.2010.12.012;,citation_volume=64;,citation_journal_title=J Clin Epidemiol;">
+<meta name="citation_reference" content="citation_title=Semantic and cognitive tools to aid statistical science: Replace confidence and significance by compatibility and surprise;,citation_author=Z. Rafi;,citation_author=S. Greenland;,citation_publication_date=2020;,citation_cover_date=2020;,citation_year=2020;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/32998683;,citation_issue=1;,citation_doi=10.1186/s12874-020-01105-9;,citation_volume=20;,citation_journal_title=BMC Med Res Methodol;">
+<meta name="citation_reference" content="citation_title=Bayesian analytical methods in cardiovascular clinical trials: Why, when, and how;,citation_author=S. Heuts;,citation_author=M. J. Kawczynski;,citation_author=A. Sayed;,citation_author=S. M. Urbut;,citation_author=A. M. Albuquerque;,citation_author=J. M. Mandrola;,citation_author=S. Kaul;,citation_author=Jr. Harrell;,citation_author=A. Gabrio;,citation_author=J. M. Brophy;,citation_publication_date=2025;,citation_cover_date=2025;,citation_year=2025;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/39521054;,citation_issue=1;,citation_doi=10.1016/j.cjca.2024.11.002;,citation_volume=41;,citation_journal_title=Can J Cardiol;">
+<meta name="citation_reference" content="citation_title=Methods in health service research. An introduction to bayesian methods in health technology assessment;,citation_author=D. J. Spiegelhalter;,citation_author=J. P. Myles;,citation_author=D. R. Jones;,citation_author=K. R. Abrams;,citation_publication_date=1999;,citation_cover_date=1999;,citation_year=1999;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/10454409;,citation_issue=7208;,citation_doi=10.1136/bmj.319.7208.508;,citation_volume=319;,citation_journal_title=BMJ;">
+<meta name="citation_reference" content="citation_title=Interpretation of random effects meta-analyses;,citation_author=R. D. Riley;,citation_author=J. P. Higgins;,citation_author=J. J. Deeks;,citation_publication_date=2011;,citation_cover_date=2011;,citation_year=2011;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/21310794;,citation_doi=10.1136/bmj.d549;,citation_volume=342;,citation_journal_title=BMJ;">
+<meta name="citation_reference" content="citation_title=Plea for routinely presenting prediction intervals in meta-analysis;,citation_author=J. IntHout;,citation_author=J. P. Ioannidis;,citation_author=M. M. Rovers;,citation_author=J. J. Goeman;,citation_publication_date=2016;,citation_cover_date=2016;,citation_year=2016;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/27406637;,citation_issue=7;,citation_doi=10.1136/bmjopen-2015-010247;,citation_volume=6;,citation_journal_title=BMJ Open;">
+<meta name="citation_reference" content="citation_title=Stan: A probabilistic programming language;,citation_author=B. Carpenter;,citation_author=A. Gelman;,citation_author=M. D. Hoffman;,citation_author=D. Lee;,citation_author=B. Goodrich;,citation_author=M. Betancourt;,citation_author=M. A. Brubaker;,citation_author=J. Guo;,citation_author=P. Li;,citation_author=A. Riddell;,citation_publication_date=2017;,citation_cover_date=2017;,citation_year=2017;,citation_fulltext_html_url=https://www.ncbi.nlm.nih.gov/pubmed/36568334;,citation_doi=10.18637/jss.v076.i01;,citation_volume=76;,citation_journal_title=J Stat Softw;">
+<meta name="citation_reference" content="citation_title=R: A language and environment for statistical computing;,citation_author=R Core Team;,citation_publication_date=2025;,citation_cover_date=2025;,citation_year=2025;,citation_fulltext_html_url=https://www.R-project.org/;">
+<meta name="citation_reference" content="citation_title=Cmdstanr: R interface to ’CmdStan’;,citation_author=Jonah Gabry;,citation_author=Rok Češnovar;,citation_author=Andrew Johnson;,citation_author=Steve Bronder;,citation_publication_date=2025;,citation_cover_date=2025;,citation_year=2025;,citation_fulltext_html_url=https://mc-stan.org/cmdstanr/;">
+<meta name="citation_reference" content="citation_title=RStudio: Integrated development environment for r;,citation_author=Posit team;,citation_publication_date=2025;,citation_cover_date=2025;,citation_year=2025;,citation_fulltext_html_url=http://www.posit.co/;">
+<meta name="citation_reference" content="citation_title=Conducting meta-analyses in R with the metafor package;,citation_author=Wolfgang Viechtbauer;,citation_publication_date=2010;,citation_cover_date=2010;,citation_year=2010;,citation_issue=3;,citation_doi=10.18637/jss.v036.i03;,citation_volume=36;,citation_journal_title=Journal of Statistical Software;">
+</head>
+
+  <body class="quarto-notebook">
+    <div id="quarto-embed-header" class="headroom fixed-top bg-primary">
+      
+      <a onclick="window.quartoBackToArticle(); return false;" class="btn btn-primary quarto-back-link" href=""><i class="bi bi-caret-left"></i> Back to Article</a>
+      <h6><i class="bi bi-journal-code"></i> Article Notebook</h6>
+
+            <a href="./index.qmd" class="btn btn-primary quarto-download-embed" download="index.qmd">Download Source</a>
+          </div>
+
+     <header id="title-block-header" class="quarto-title-block default toc-left page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">The trials of interpreting clinical trials - A Bayesian perspective</h1>
+          </div>
+
+    
+    <div class="quarto-title-meta-container">
+      <div class="quarto-title-meta-column-start">
+            <div class="quarto-title-meta-author">
+          <div class="quarto-title-meta-heading">Author</div>
+          <div class="quarto-title-meta-heading">Affiliation</div>
+          
+                <div class="quarto-title-meta-contents">
+            <p class="author">Jay Brophy <a href="mailto:james.brophy@mcgill.ca" class="quarto-title-author-email"><i class="bi bi-envelope"></i></a> <a href="https://orcid.org/0000-0001-8049-6875" class="quarto-title-author-orcid"> <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo1N0NEMjA4MDI1MjA2ODExOTk0QzkzNTEzRjZEQTg1NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDozM0NDOEJGNEZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDozM0NDOEJGM0ZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkZDN0YxMTc0MDcyMDY4MTE5NUZFRDc5MUM2MUUwNEREIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjU3Q0QyMDgwMjUyMDY4MTE5OTRDOTM1MTNGNkRBODU3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+84NovQAAAR1JREFUeNpiZEADy85ZJgCpeCB2QJM6AMQLo4yOL0AWZETSqACk1gOxAQN+cAGIA4EGPQBxmJA0nwdpjjQ8xqArmczw5tMHXAaALDgP1QMxAGqzAAPxQACqh4ER6uf5MBlkm0X4EGayMfMw/Pr7Bd2gRBZogMFBrv01hisv5jLsv9nLAPIOMnjy8RDDyYctyAbFM2EJbRQw+aAWw/LzVgx7b+cwCHKqMhjJFCBLOzAR6+lXX84xnHjYyqAo5IUizkRCwIENQQckGSDGY4TVgAPEaraQr2a4/24bSuoExcJCfAEJihXkWDj3ZAKy9EJGaEo8T0QSxkjSwORsCAuDQCD+QILmD1A9kECEZgxDaEZhICIzGcIyEyOl2RkgwAAhkmC+eAm0TAAAAABJRU5ErkJggg=="></a></p>
+          </div>
+                <div class="quarto-title-meta-contents">
+                    <p class="affiliation">
+                        McGill University
+                      </p>
+                  </div>
+                    </div>
+        
+        <div class="quarto-title-meta">
+
+                      
+                <div>
+            <div class="quarto-title-meta-heading">Published</div>
+            <div class="quarto-title-meta-contents">
+              <p class="date">April 23, 2025</p>
+            </div>
+          </div>
+          
+                
+              </div>
+      </div>
+      <div class="quarto-title-meta-column-end quarto-other-formats-target">
+      </div>
+    </div>
+
+
+
+    <div class="quarto-other-links-text-target">
+    </div>  </div>
+</header><div id="quarto-content" class="page-columns page-rows-contents page-layout-article toc-left">
+<div id="quarto-sidebar-toc-left" class="sidebar toc-left">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#front-page" id="toc-front-page" class="nav-link active" data-scroll-target="#front-page">Front page</a></li>
+  <li><a href="#abstract" id="toc-abstract" class="nav-link" data-scroll-target="#abstract">Abstract</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link" data-scroll-target="#introduction">Introduction</a></li>
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a></li>
+  <li><a href="#results" id="toc-results" class="nav-link" data-scroll-target="#results">Results</a>
+  <ul class="collapse">
+  <li><a href="#previous-studies" id="toc-previous-studies" class="nav-link" data-scroll-target="#previous-studies">Previous studies</a></li>
+  <li><a href="#the-new-evidence" id="toc-the-new-evidence" class="nav-link" data-scroll-target="#the-new-evidence">The new evidence</a></li>
+  <li><a href="#sequential-evidentary-updating---a-bayesian-approach" id="toc-sequential-evidentary-updating---a-bayesian-approach" class="nav-link" data-scroll-target="#sequential-evidentary-updating---a-bayesian-approach">Sequential evidentary updating - A Bayesian approach</a></li>
+  <li><a href="#bayesian-meta-analysis" id="toc-bayesian-meta-analysis" class="nav-link" data-scroll-target="#bayesian-meta-analysis">Bayesian Meta-analysis</a></li>
+  </ul></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
+  <li><a href="#supplemental-information" id="toc-supplemental-information" class="nav-link" data-scroll-target="#supplemental-information">Supplemental information</a></li>
+  <li><a href="#figure-1" id="toc-figure-1" class="nav-link" data-scroll-target="#figure-1">Figure 1</a></li>
+  <li><a href="#figure-2" id="toc-figure-2" class="nav-link" data-scroll-target="#figure-2">Figure 2</a></li>
+  <li><a href="#table-1" id="toc-table-1" class="nav-link" data-scroll-target="#table-1">Table 1</a></li>
+  <li><a href="#table-2" id="toc-table-2" class="nav-link" data-scroll-target="#table-2">Table 2</a></li>
+  <li><a href="#table-3" id="toc-table-3" class="nav-link" data-scroll-target="#table-3">Table 3</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+</div>
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+</div>
+<main class="content quarto-banner-title-block" id="quarto-document-content">      
+
+       <div class="cell-container"><div class="cell-decorator"><pre>In [1]:</pre></div><div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set global options for chunk outputs</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span>opts_chunk<span class="sc">$</span><span class="fu">set</span>(</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">message =</span> <span class="cn">FALSE</span>,  <span class="co"># Hide messages</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">warning =</span> <span class="cn">FALSE</span>,  <span class="co"># Hide warnings</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">echo =</span> <span class="cn">FALSE</span>,      <span class="co"># Show code</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">eval =</span> <span class="cn">TRUE</span>,      <span class="co"># Ensure code is evaluated</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">comment =</span> <span class="cn">NA</span>,     <span class="co"># Suppress "In [1]:" or similar prompts</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">include =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">results =</span> <span class="st">"markup"</span> <span class="co"># Ensure output is rendered as markup, not interactive ?"asis"</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(posterior)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(brms)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(Rcpp)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(lme4)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(readr)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(meta)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(metafor)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(dplyr)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(knitr)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse, <span class="at">quietly =</span> T)</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(magrittr, <span class="at">quietly =</span> T)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(cmdstanr, <span class="at">quietly =</span> T)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(bayesplot,<span class="at">quietly =</span> T)</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lme4, <span class="at">quietly =</span> T)</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(posterior, <span class="at">quietly =</span> T)</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(brms, <span class="at">quietly =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div></div>
+<section id="front-page" class="level2">
+<h2 class="anchored" data-anchor-id="front-page">Front page</h2>
+<p>The trials of interpreting clinical trials – &nbsp;<br>
+A Bayesian perspective on colchicine following an acute coronary syndrome &nbsp;</p>
+<p>James M Brophy MD PhD<span class="math inline">\(^{1,2,3}\)</span> 1,2,3, Nandini Dendukuri PhD<span class="math inline">\(^{1,2,}\)</span>&nbsp;</p>
+<p>1 McGill University Health Center Centre for Health Outcomes Research (CORE)&nbsp;<br>
+5252 Boul. de Maisonneuve West,&nbsp;<br>
+Montréal QC H4A 3S5&nbsp;<br>
+Email address: james.brophy@mcgill.ca&nbsp;</p>
+<p>2 Department of Medicine, &nbsp;<br>
+McGill University, Montréal, QC&nbsp;</p>
+<p>3 Department of Epidemiology, Biostatistics and Occupational Health, &nbsp;<br>
+McGill University, Montréal, QC &nbsp;</p>
+<p>Word count: 2403 (including references) &nbsp;<br>
+Tables: 3 &nbsp;<br>
+Figures: 2 &nbsp;</p>
+<p><newpage></newpage></p>
+</section>
+<section id="abstract" class="level2">
+<h2 class="anchored" data-anchor-id="abstract">Abstract</h2>
+<p><strong>Objectives:</strong> Evidence based medicine (EBM) places systematic reviews and meta-analyses, ideally of randomized clinical trials (RCTs), at the top of the evidential pyramid but resolving situations with apparently “conflicting” evidence can be problematic. Bayesian methods may assist in better understanding uncertainty and improve results harmonization. &nbsp;</p>
+<p><strong>Design:</strong> A 2022 meta-analysis concluded that colchicine reduced the cardiac risk in patients undergoing acute percutaneous coronary interventions (PCI). Nevertheless, a large, RCT (CLEAR) continued to randomize acute PCI patients to colchicine or placebo and in 2025 published their findings of no benefit. Bayesian sequential analyses and hierarchical meta-analysis can inform the decision to complete this trial and augment the nuances surrounding its interpretation. &nbsp;</p>
+<p><strong>Setting:</strong> RCTs of coronary artery disease (CAD) patients with an acute coronary syndrome admission undergoing percutaneous coronary intervention (PCI). &nbsp;</p>
+<p><strong>Interventions:</strong> Randomization to colchicine or placebo.&nbsp;</p>
+<p><strong>Main outcomes:</strong> The primary outcome was major adverse cardiovascular events (MACE), a composite of death from cardiovascular causes, recurrent myocardial infarction, stroke, or unplanned ischemia-driven coronary revascularization.&nbsp;</p>
+<p><strong>Results:</strong> While a published 2022 meta-analysis suggested a statistical, and likely clinically, meaningful decrease in MACE with colchicine (pooled risk ratio 0.73 [95% confidence interval (CI) 0.62, 0.86]), a Bayesian reanalysis showed a 95% credible interval (95% CrI 0.26, 1.70) for the next study, fully justifying the continuation of CLEAR. CLEAR results were interpreted as not reducing the incidence MACE (hazard ratio, 0.99; 95% confidence interval [CI], 0.85 to 1.16). Bayesian sequential re-analyses using a vague prior (i..e. result dominated by CLEAR), an all-inclusive prior (based on the previous meta-analysis), and a focused prior (considering only the largest and most similar previous RCT) showed 58%, 100% and 92% probabilities of a decrease in MACE with colchicine. The probabilities that these decreases were clinicall meaningful, based on exceeding an absolute 15% MACE reduction, was more modest with probabilities ranging between 3% and 40%.&nbsp;</p>
+<p><strong>Conclusions:</strong> The totality of the colchicine evidence in acute cardiac care strongly suggests benefit, but it is unlikely to be of clinical importance. Bayesian analyses better capture uncertainties, incorporate prior evidence, avoid common cognitive biases thereby and facilitating clinical trial interpretation.</p>
+</section>
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p>The evidence based medicine (EBM) paradigm places systematic reviews and meta-analyses, ideally of randomized clinical trials, at the top of the evidential pyramid<span class="citation" data-cites="RN7635">(<a href="#ref-RN7635" role="doc-biblioref">1</a>)</span>. While symbolically straight forward, there are numerous intricacies in properly assessing the quality and interpretation of individual RCTs and meta-analyses. Reporting guidelines[<span class="citation" data-cites="RN69">(<a href="#ref-RN69" role="doc-biblioref">2</a>)</span>]<span class="citation" data-cites="RN7095">(<a href="#ref-RN7095" role="doc-biblioref">3</a>)</span> have been proposed with the hope that their adhesion will improve quality. However, there remain difficulties in scientific communication leading to misinterpretations of both clinical trials<span class="citation" data-cites="RN6971">(<a href="#ref-RN6971" role="doc-biblioref">4</a>)</span> and meta-analyses<span class="citation" data-cites="RN6883">(<a href="#ref-RN6883" role="doc-biblioref">5</a>)</span>. The underlying causes are multifactorial likely a combination of a lack of systematic integration of previous and current trials[<span class="citation" data-cites="RN6664">(<a href="#ref-RN6664" role="doc-biblioref">6</a>)</span>]<span class="citation" data-cites="RN3816">(<a href="#ref-RN3816" role="doc-biblioref">7</a>)</span>, an under appreciation and esitmation of uncertainties<span class="citation" data-cites="RN7060">(<a href="#ref-RN7060" role="doc-biblioref">8</a>)</span> and cognitive biases associated with the standard null hypothesis significance testing paradigm<span class="citation" data-cites="RN5257">(<a href="#ref-RN5257" role="doc-biblioref">9</a>)</span>. &nbsp;</p>
+<p>The importance of these issues will be demonstrated with the contemporary example of colchicine in the prevention of cardiovascular events in high risk patients. The incremental advantages of Bayesian approaches over more traditional methods to decide when additional research is required, how to interpret the new results, how to synthesize and communicate the totality of the evidence will be presented. At each stage the incremental benefits of the Bayesian approach over the traditional statistical approach will be highlighted. While additional statistical insights are demonstrated, these remain ancillary to the crucial element of clinical judgement. Analogously to statistical significance not equating unreservedly to causality, clinical judgement must precede statistical analyses in deciding what is a “reasonable” research question, design, analysis and when are different studies “combinable”.&nbsp;</p>
+<p>These topics will be explored in the context of colchicine in patients with symptomatic (acute) coronary artery disease (CAD) who have had acute percutaneous coronary interventions (PCI) with particular attention to the execution and interpretation of a recent study<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span>.</p>
+</section>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<p>We initially reproduced the 2022 systematic review and meta-analysis<span class="citation" data-cites="RN32">(<a href="#ref-RN32" role="doc-biblioref">11</a>)</span> of colchicine for patients with symptomatic CAD who underwent acutePCI, published before the completion of the 2025 CLEAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span> trial. This not only assured reproducibility of prior evidence but also permitted the addition of the valuable[<span class="citation" data-cites="RN2435">(<a href="#ref-RN2435" role="doc-biblioref">12</a>)</span>]<span class="citation" data-cites="RN6702">(<a href="#ref-RN6702" role="doc-biblioref">13</a>)</span>, but missing, prediction interval<span class="citation" data-cites="RN32">(<a href="#ref-RN32" role="doc-biblioref">11</a>)</span>. The prediction interval represents the expected range for the next study by considers both within and between study variation and is expressed algebraically as&nbsp;<br>
+<span class="math display">\[\text{Prediction interval} = \hat{\theta} ± t_{0.975,\text{ df}} × sqrt(SE^2 + tau^2)\]</span> where:&nbsp;<br>
+<span class="math inline">\(\hat{\theta}\)</span> is the pooled log(RR),<br>
+SE is its standard error, &nbsp;<br>
+<span class="math inline">\(\tau^2\)</span> is the between-study variance, and &nbsp;<br>
+<span class="math inline">\(t_{0.975, df}\)</span> is the critical value from the t-distribution with k−2 degrees of freedom.&nbsp;</p>
+<p>The prediction interval can then be back-transformed to the Risk Ratio (RR) scale. &nbsp;</p>
+<p>However, this frequentist prediction interval assumes the parameters are perfectly known and fixed, thereby limiting their natural variability. Bayesian hierarchical random-effects model for aggregated study-level data acknowledge the uncertainty with each observed study effect estimate, <span class="math inline">\(y_i\)</span>, modeled as ~ <span class="math inline">\(N(\theta_{i}, \sigma^2_{i})\)</span>, where <span class="math inline">\(\sigma_i\)</span> is the known standard error for each study. &nbsp;</p>
+<p>The latent true <span class="math inline">\(study_i\)</span> effect, denoted by <span class="math inline">\(\theta_i\)</span>, is assumed to vary across studies and is itself modeled as ~ N(<span class="math inline">\(\mu\)</span>, <span class="math inline">\(\tau^2\)</span>), where <span class="math inline">\(\mu\)</span> is the overall average effect, and <span class="math inline">\(\tau\)</span> is the between-study standard deviation, also known as the heterogeneity. Vague priors can be assigned to these parameters; a standard normal prior for <span class="math inline">\(\mu\)</span> ~ N(0,1), and a half-normal prior (via <span class="math inline">\(\tau\)</span> ~ normal(0, 1) with <span class="math inline">\(\tau\)</span> &gt;= 0) for <span class="math inline">\(\tau\)</span>. Together, these define a normal-normal hierarchical model, where partial pooling occurs such that individual study estimates are shrunk toward the overall mean, with the degree of shrinkage determined by <span class="math inline">\(\tau\)</span>. This model supports posterior inference on <span class="math inline">\(\mu\)</span>, study-specific effects <span class="math inline">\(\theta_i\)</span>, and provides a prediction interval for a future study by simulating from the posterior predictive distribution, while acknowledging the uncertainty of the model parameters. Typically Bayesian prediction intervals will therefore by wider than their frequnetist counterparts. This provided an update of the 2022 meta-analysis<span class="citation" data-cites="RN32">(<a href="#ref-RN32" role="doc-biblioref">11</a>)</span> with prediction intervals as well as current meta-analysis that included CLEAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span>.&nbsp;</p>
+<p>Rather than concentrating on the prediction interval for the next study, interest may center on the interpretation of the most recent CLEAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span> study, but not as an isolated entity as done in the original publication, but rather in the context of what was previously known. This sequential updating of prior evidence with new data is the essence of Bayesian inference. The binary observed summary statistic <em>y</em>, the log risk ratio from CLEAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span> can be represented by a binomial distribution. However given the large sample size, the the log risk ratio is equally well approximated by a normal distribution, modeled as <em>y</em> ~ N(<span class="math inline">\(\mu\)</span>, <span class="math inline">\(\sigma^2\)</span>), with assumed known standard error <span class="math inline">\(\sigma\)</span>. A normal prior is again placed on <span class="math inline">\(\mu\)</span> ~ N(<span class="math inline">\(\mu_{prior}\)</span>, <span class="math inline">\(\sigma^2_{prior}\)</span>). The model returns a posterior distribution for <span class="math inline">\(\mu\)</span>, combining prior information and observed data in accordance with Bayes’ theorem. Identical results were obtained with a binomial instead of a normal distribution of the data (results not shown). &nbsp;</p>
+<p>As priors may be considered subjective, multiple priors, a community of priors, can assess concerns of subjectivity and the robustness of the analyses. Adopting the CLEAR investigators’ published viewpoint of trial interpretation independent of any prior knowledge implies a vague prior so that the posterior probability distribution is dominated by the observed CLEAR data. CLEAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span> investigators also acknowledged previous evidence, particularly the COLCOT<span class="citation" data-cites="RN33">(<a href="#ref-RN33" role="doc-biblioref">14</a>)</span> trial. It therefore seems appropriate to consider two additional priors, COLCOT<span class="citation" data-cites="RN33">(<a href="#ref-RN33" role="doc-biblioref">14</a>)</span> and one that uses all prior relevant evidence as summarized in the previous meta-analysis<span class="citation" data-cites="RN32">(<a href="#ref-RN32" role="doc-biblioref">11</a>)</span>. These three priors can be specified as follows;&nbsp;<br>
+- a vague prior (N(0, 2)) for the mean summary statistic, log(RR), which allows CLEAR data to dominate and approximate the published frequentist result &nbsp;<br>
+- a fully informative mean summary prior using all previous data as summarized by the prediction interval of the earlier meta-analysis<span class="citation" data-cites="RN32">(<a href="#ref-RN32" role="doc-biblioref">11</a>)</span> &nbsp;<br>
+- a “focused” mean summary prior based on the largest, highest-quality, most similar previous RCT, COLCOT<span class="citation" data-cites="RN33">(<a href="#ref-RN33" role="doc-biblioref">14</a>)</span>, which also has the most positive results &nbsp;</p>
+<p>All analyses were preformed within the <code>R</code> ecosystem<span class="citation" data-cites="R">(<a href="#ref-R" role="doc-biblioref">15</a>)</span> and the <code>RStudio</code> Integrated Development Environment<span class="citation" data-cites="RStudio">(<a href="#ref-RStudio" role="doc-biblioref">16</a>)</span>. The reproduction of the frequentist random effects was performed with the <code>metafor</code> package<span class="citation" data-cites="metafor">(<a href="#ref-metafor" role="doc-biblioref">17</a>)</span>. The Bayesian hierarchical meta-analysis to synthesize the evidence estimated by the pooled log risk ratio used the Stan programing language<span class="citation" data-cites="RN74">(<a href="#ref-RN74" role="doc-biblioref">18</a>)</span> with Hamiltonian Monte Carlo sampling of the posterrior distribution and the <code>cmdstanr</code> package<span class="citation" data-cites="cmdstanr">(<a href="#ref-cmdstanr" role="doc-biblioref">19</a>)</span>. Although the sequential updating approach defines a conjugate model — meaning the posterior is also normally distributed and could be derived analytically — we have not used this closed-form solution. Instead, we again used numerical methods<span class="citation" data-cites="RN74">(<a href="#ref-RN74" role="doc-biblioref">18</a>)</span> (specifically, Hamiltonian Monte Carlo) to sample from the posterior distribution of <span class="math inline">\(\mu\)</span>, allowing maximum flexibility and extendibility (e.g., to non-conjugate or hierarchical models). all statistical code is available at <a href="https://github.com/brophyj">github.com/brophyj</a> &nbsp;</p>
+</section>
+<section id="results" class="level2">
+<h2 class="anchored" data-anchor-id="results">Results</h2>
+<section id="previous-studies" class="level3">
+<h3 class="anchored" data-anchor-id="previous-studies">Previous studies</h3>
+<p>The 2022, pre-CLEAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span>, systematic review and meta-analysis<span class="citation" data-cites="RN32">(<a href="#ref-RN32" role="doc-biblioref">11</a>)</span> of the effects of colchicine in patients with symptomatic acute CAD who underwent PCI reported reduced MACE outcomes (RR 0.73 (95% CI 0.61 to 0.87); p=0.0003) with minimal heterogeneity (<span class="math inline">\(I^2\)</span>=6%). Our calculated frequentist pooled summary estimate was identical to the published result and the frequentist prediction interval was only marginally widened (0.60 - 0.90) due to the limited observed between study heterogeneity. Based on the upper 95% CI of this model, the next colchicine study was predicted to almost certainly have at least a 10% reduction in cardiovascular outcomes. However, the fragility of that conclusion becomes apparent if a different model for the between study variation with heavier tails than the current <span class="math inline">\(t_{(n-k)df}\)</span> choice is assumed. For example with a critical value of <span class="math inline">\(t_{0.975,2}\)</span> the upper 95% CI for the predicted interval becomes 1.04, suggesting the need for further studies to reduce the uncertainty of the summary estimate. &nbsp;</p>
+<p>Moreover with only a few studies, treating <span class="math inline">\(\tau\)</span> and <span class="math inline">\(\mu\)</span> as known and fixed quantities can seriously underestimate uncertainty. A Bayesian model averages over the joint posterior distribution of these two parameters better reflecting the uncertainty in how effects vary between studies (heterogeneity), while also accounting for uncertainty in the pooled average effect itself. This results in a wider and more realistic prediction intervals (0.35 - 1.29) that better captures the expected range of effects for a new study (Table 1). Unlike the frequentist analysis, this approach confirms the need for additional research to better define the estimate for any beneficial colchicine effect.&nbsp;</p>
+</section>
+<section id="the-new-evidence" class="level3">
+<h3 class="anchored" data-anchor-id="the-new-evidence">The new evidence</h3>
+<p>Between February 1, 2018, and November 8, 2022, CLEAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span> patients were randomized to colchicine (n = 3,528) or placebo (n = 3,534) immediately after PCI. The primary outcome was MACE, a composite of cardiovascular death, MI, stroke, or ischemia-driven revascularization. With a median 3 year follow-up, there were 9.1% events in the colchicine group and 9.3% in the placebo arm (HR 0.99, 95% CI 0.85-1.16). Given the high quality study design, execution, and large number of primary outcome events (n=649), the authors reasoned that the probability of a spurious result was low. Thus, they concluded “… treatment with colchicine, when started soon after myocardial infarction and continued for a median of 3 years, did not reduce the incidence of the composite primary outcome.”<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span>&nbsp;</p>
+<p>CLEAR authors acknowledge that the most comparable previous study was COLCOT<span class="citation" data-cites="RN33">(<a href="#ref-RN33" role="doc-biblioref">14</a>)</span>, a randomized trial of 4745 patients within 30 days of an acute myocardial infarction, who received the same interventions with essentially the same composite primary enpoint and a median 22.6 months follow-up. COLCOT<span class="citation" data-cites="RN33">(<a href="#ref-RN33" role="doc-biblioref">14</a>)</span> had fewer total primary-outcome events (n=301), but nevertheless found a 23% relative risk reduction (HR 0.77, 95% CI 0.61 - 0.96). In the CLEAR discussion<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span>, there was no attempt to explain these “differences” other than observing that two colchicine trials in stroke patients[<span class="citation" data-cites="RN52">(<a href="#ref-RN52" role="doc-biblioref">20</a>)</span>]<span class="citation" data-cites="RN53">(<a href="#ref-RN53" role="doc-biblioref">21</a>)</span> also showed no benefit with colchicine and that CLEAR was a larger trial, presumably with an improved precision of any treatment effect.&nbsp;</p>
+<p>Should clinicians adopt the CLEAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span> investigators’ view that the larger trial is to be believed and that the previous evidence from the 4745 COLCOT<span class="citation" data-cites="RN33">(<a href="#ref-RN33" role="doc-biblioref">14</a>)</span> subjects or the 6660 meta-analysis<span class="citation" data-cites="RN32">(<a href="#ref-RN32" role="doc-biblioref">11</a>)</span> subjects should simply be forgotten? The CLEAR PI was explicit in an interview following an oral presentation of their findings stating “I was a believer in colchicine but after CLEAR I decided to stop it in my parent”<span class="citation" data-cites="RN7043">(<a href="#ref-RN7043" role="doc-biblioref">22</a>)</span>. Presumably his prior belief wasn’t universally shared, or at least believed at a clinically significant threshold, as otherwise equipoise would have been lacking to proceed with the CLEAR trial. In any case, this dichotomization of thinking for accepting or rejecting null hypotheses significance testing and for clinical decision making is common among clinicians.&nbsp;</p>
+</section>
+<section id="sequential-evidentary-updating---a-bayesian-approach" class="level3">
+<h3 class="anchored" data-anchor-id="sequential-evidentary-updating---a-bayesian-approach">Sequential evidentary updating - A Bayesian approach</h3>
+<p>The above approach where decisions are conditioned on the comparison of p values (probability of the observed or more extreme data | null hypothesis) to prespecified type I errors, typically 0.05 is standard in medical research. Unfortunately this approach may result in cognitive errors[<span class="citation" data-cites="RN3836">(<a href="#ref-RN3836" role="doc-biblioref">23</a>)</span>]<span class="citation" data-cites="RN3826">(<a href="#ref-RN3826" role="doc-biblioref">24</a>)</span><span class="citation" data-cites="RN5420">(<a href="#ref-RN5420" role="doc-biblioref">25</a>)</span>. On the other hand, a Bayesian approach provides the information clinicians are actually seeking, namely the probability that the hypothesis is true given the observed data, the so called “inverse probability”. This posterior distribution, derived from a weighted combination of a prior belief and the current data, incorporates prior knowledge according to the rules of probability via Bayes Theorem, and avoids the aforementioned cognitive errors<span class="citation" data-cites="RN6664">(<a href="#ref-RN6664" role="doc-biblioref">6</a>)</span>. A further advantage of probability distributions is they are not restricted to specific point estimates but permit calculations for multiple different cutpoints or intervals. For example, one might be particularly interested in probabilities exceeding a clinically meaningful thresholds for benefit or harm. Such clinical cutpoints can be individually selected but for demonstration purposes with the colchcine example a benefit threshold of RR &lt; 0.9 and harm threshold of RR &gt; 1.1 has been chosen.&nbsp;</p>
+<p>Figure 1 graphically displays the three priors and the three updated posteriors after the incorporation of the CLEAR data. The informative posteriors are a weighted average of prior and CLEAR data (blue distribution) with weights proportional to their precisions and therefore a shifting of the priors towards the CLEAR data (likelihood ). Informative posterior distributions also show the expected improved precision with a narrowing distributions due to the inclusion of the new data. The posterior distribution with a vague prior corresponds to the CLEAR data alone, the so-called likelihood. &nbsp;</p>
+<p>Numerical results are derived from integration of the area under the posterior curves (AUC) to the left of any selected threshold and are given in Table 2. The posterior results using informative priors suggests a 92% to 100% probability of decreased MACE outcomes (AUC &lt; 1). Moreover, these analyses suggest a possible 12% to 41% probability that the MACE decrease is at least 15% (AUC &lt; 0.85). Regardless of the chosen prior, there is virtually no chance that colchicine increases cardiac risk by a clinically meaningful amount (AUC &lt; 1.15).</p>
+</section>
+<section id="bayesian-meta-analysis" class="level3">
+<h3 class="anchored" data-anchor-id="bayesian-meta-analysis">Bayesian Meta-analysis</h3>
+<p>Updating prior beliefs is temporally consistent with data availability and mirrors human sequential learning. A different perspective that also combined all available data but concentrates on the summary result and predictability of the next future study is provided by meta-analytical techniques. This approach ignores data temporality and is problematic when the total number of trials is small. A Bayesian random effects (hierarchical) meta-analysis is preferred over the frequentist model, since as discussed above it models all parameter uncertainty. Individual studies are considered part of a larger population of studies and individual study estimates are “pulled” and “shrunken” toward the overall mean effect. Hierarchical models represent a compromise between complete pooling (fixed effect) or no pooling (complete study independence). Hierarchical models thereby account for both within and between study variability producing pooled mean estimates that integrate information from different studies while acknowledging their variability. These models also can provide the predictive interval for the next study from the super population of possible studies. &nbsp;</p>
+<p>The Forest plot for the updated Bayesian meta-analysis with CLEAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span> in shown in Figure 2 with numerical results in Table 3. The figure demonstrates the shrinkage of each observed trial result towards the global mean. It also shows a point estimate for global mean that is close to the pre-CLEAR pooled value but with wider 95% CI and the prediction intervals due to the increased between trial heterogeneity &nbsp;</p>
+</section>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>While the published conclusion of the CLEAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span> trial was that colchicine did not reduce the incidence of MACE, this Bayesian re-analysis with two well justifierd informative priors suggests there is a strong probability (57% to 100%) that colchicine does reduce MACE, although the probability that this benefit exceeds a clinically meaningful 10% reduction is only modest (between 39% to 79%). More meaningful risk reductions are less likely but not impossible (12% to 41% probability of a 15% reduction). This Bayesian approach allows a more complete and nuanced examination not only of the recent CELAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span> study on on its own merit but also in the context of existing evidence. While it may seem disconcerting that after 13,000 randomized patients we do not have an unequivocal answer to the research question, this nonetheless reflects reality. These results should not be interpreted as a rejection of the colchicine hypothesis as implied by CLEAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span> but rather alternatively as showing that while a large clinical benefit is unlikely the possibility of a modest colchicine clinical benefit has not been definitively excluded. &nbsp;</p>
+<p>This study also highlights the importance of considering prediction intervals and a Bayesian approach in meta-analysis. Had the CLEAR investigators relied on the pooled summary estimate from the 2022 frequentist meta-analysis<span class="citation" data-cites="RN32">(<a href="#ref-RN32" role="doc-biblioref">11</a>)</span>, they would have prematurely and inappropriately stopped the trial for ersatz efficacy. Prediction intervals are important in meta-analyses to assess the likely range of a future study. However as this example shows, frequentist methods often under-estimate the uncertainty associated with these intervals and may lead to inappropriate over confident conclusions. &nbsp;</p>
+<p>Given that CLEAR<span class="citation" data-cites="CLEAR">(<a href="#ref-CLEAR" role="doc-biblioref">10</a>)</span> and COLCOT<span class="citation" data-cites="RN33">(<a href="#ref-RN33" role="doc-biblioref">14</a>)</span> were both well designed, well executed trials examining the same intervention in the same study populations and published in the same esteemed medical journal, its seems absurd to ignore either of them. A fundamental question is are these two study results really different? First and most importantly from a clinical perspective the trials do examine the same intervemntion and outcomes in a very similar populations. From a statistical perspective the results aren’t radically different with overlapping 95% CIs. It is only if each trial is assessed with the inappropriate dichotomous statistical significance lens (p &lt; or &gt; 0.05) that the two trials appear different. The key insight being “In making a comparison between two treatments, one should look at the statistical significance of the difference rather than the difference between their significance levels<span class="citation" data-cites="RN5721">(<a href="#ref-RN5721" role="doc-biblioref">26</a>)</span>. The Bayesian statistical lens will sharpen this perspective.&nbsp;</p>
+<p>Clinicians are often faced with “conflicting” trial evidence. However if the trials are of equal high quality, often these conflicts are illusory arising from the improper comparisons of statistical significance. Systematic reviews and meta-analyses of prior evidence are now de riguer before a study is considered for peer review funding. Yet there is no similar mandate for evidence synthesis upon trial completion. Indeed current incentives strongly favor each trial being individually interpreted. However, as demonstrated in this example, this approach can lead to vacillating beliefs that do not respect the laws of probability and consequently may not align with the true state of knowledge. Bayesian techniques can address these issues thereby raising the quality of clinical trial interpretations.&nbsp;</p>
+<p>Consider the colchicine “believer” prior to CLEAR but not afterwards. If COLCOT was responsible for the initial positive prior belief, this analyse suggests after CLEAR there remains a 92% probability of decreased risk with colchicine, a 39% probability that the beenfit exceeds a 10% reduction. Of course, if a clinician has an clinical cutpoint for efficacy of RR &lt; 0.80 then it does indeed seem reasonable, based on the totality of the evidence to be a “non-believer” after CLEAR as the probability of a decrease in cardiovascular outcomes of this magnitude is less than 0-2%. However consistency would imply that their prior belief should also be referenced to a probability of RR &lt; 0.80 which for COLCOT was only 60% which seems a modest probability to have become an earlier “believer”. This demonstrates that an intuitive reconciliation of prior and posterior beliefs can be difficult and is not facilitated by dichotomized reasoning. Moreover, clinicians may exhibit an availability bias whereby they are overly influenced by the last trial, particularly if they were intimately involved in it. The probabilistically correct harmonization of all available evidence with a Bayesian analysis can mininmize these cognitive errors and an increased emphasis on teaching these methods to clinicians would seem appropriate.<br>
+</p>
+</section>
+<section id="supplemental-information" class="level2">
+<h2 class="anchored" data-anchor-id="supplemental-information">Supplemental information</h2>
+<p>There were no funding sources for this work.&nbsp;<br>
+The code for these analyses can be found <a href="https://github.com/brophyj/colchicine">https://github.com/brophyj/colchicine</a> &nbsp;</p>
+<p></p><div style="page-break-after: always;"></div> &nbsp;<p></p>
+</section>
+<section id="figure-1" class="level2">
+<h2 class="anchored" data-anchor-id="figure-1">Figure 1</h2>
+<p><img src="output/prior_posterior_plot_RR.png" class="img-fluid" alt="Figure 1 Three Priors and the Resulting Post-CLEAR Posterior Distributions">&nbsp; </p><div style="page-break-after: always;"></div> &nbsp;<p></p>
+</section>
+<section id="figure-2" class="level2">
+<h2 class="anchored" data-anchor-id="figure-2">Figure 2</h2>
+<p><img src="output/BMA_plot_CLEAR.png" class="img-fluid" alt="Figure 2 Forest Plot: Bayesian Meta-Analysis (Risk Ratios)">&nbsp;</p>
+<p></p><div style="page-break-after: always;"></div> &nbsp;<p></p>
+</section>
+<section id="table-1" class="level2">
+<h2 class="anchored" data-anchor-id="table-1">Table 1</h2>
+<p><img src="output/summary_BMA7.png" class="img-fluid" alt="Table 1 Observed and Posterior (Shrunken) RRs with 95% CIs (Bayesian hierarchical model - pre-CLEAR)">&nbsp;</p>
+</section>
+<section id="table-2" class="level2">
+<h2 class="anchored" data-anchor-id="table-2">Table 2</h2>
+<p><img src="output/summary_rr.png" class="img-fluid" alt="Table 2 Three Priors and the Resulting Post-CLEAR Posterior Distributions">&nbsp;</p>
+<p></p><div style="page-break-after: always;"></div> &nbsp;<p></p>
+</section>
+<section id="table-3" class="level2">
+<h2 class="anchored" data-anchor-id="table-3">Table 3</h2>
+<p><img src="output/summary_BMA8.png" class="img-fluid" alt="Table 3 Observed and Posterior (Shrunken) RRs with 95% CIs (Bayesian hierarchical model)”">&nbsp;</p>
+</section>
+<section id="references" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="references">References</h2>
+<div id="refs" class="references csl-bib-body" role="list">
+<div id="ref-RN7635" class="csl-entry" role="listitem">
+<div class="csl-left-margin">1. </div><div class="csl-right-inline">Guyatt GH, Sackett DL, Cook DJ. Users’ guides to the medical literature. II. How to use an article about therapy or prevention. B. What were the results and will they help me in caring for my patients? Evidence-based medicine working group. JAMA [Internet]. 1994;271(1):59–63. Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/8258890">https://www.ncbi.nlm.nih.gov/pubmed/8258890</a></div>
+</div>
+<div id="ref-RN69" class="csl-entry" role="listitem">
+<div class="csl-left-margin">2. </div><div class="csl-right-inline">Moher D, Hopewell S, Schulz KF, Montori V, Gotzsche PC, Devereaux PJ, et al. CONSORT 2010 explanation and elaboration: Updated guidelines for reporting parallel group randomised trials. BMJ [Internet]. 2010;340:c869. Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/20332511">https://www.ncbi.nlm.nih.gov/pubmed/20332511</a></div>
+</div>
+<div id="ref-RN7095" class="csl-entry" role="listitem">
+<div class="csl-left-margin">3. </div><div class="csl-right-inline">Page MJ, McKenzie JE, Bossuyt PM, Boutron I, Hoffmann TC, Mulrow CD, et al. The PRISMA 2020 statement: An updated guideline for reporting systematic reviews. BMJ [Internet]. 2021;372:n71. Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/33782057">https://www.ncbi.nlm.nih.gov/pubmed/33782057</a></div>
+</div>
+<div id="ref-RN6971" class="csl-entry" role="listitem">
+<div class="csl-left-margin">4. </div><div class="csl-right-inline">Ioannidis JP. Why most published research findings are false. PLoS Med [Internet]. 2005;2(8):e124. Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/16060722">https://www.ncbi.nlm.nih.gov/pubmed/16060722</a></div>
+</div>
+<div id="ref-RN6883" class="csl-entry" role="listitem">
+<div class="csl-left-margin">5. </div><div class="csl-right-inline">Pereira TV, Ioannidis JP. Statistically significant meta-analyses of clinical trials have modest credibility and inflated effects. J Clin Epidemiol [Internet]. 2011;64(10):1060–9. Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/21454050">https://www.ncbi.nlm.nih.gov/pubmed/21454050</a></div>
+</div>
+<div id="ref-RN6664" class="csl-entry" role="listitem">
+<div class="csl-left-margin">6. </div><div class="csl-right-inline">Brophy JM. Bayesian analyses of cardiovascular trials—bringing added value to the table. Canadian Journal of Cardiology. 2021;37(9):1415–27. </div>
+</div>
+<div id="ref-RN3816" class="csl-entry" role="listitem">
+<div class="csl-left-margin">7. </div><div class="csl-right-inline">Spiegelhalter DJ, Myles JP, Jones DR, Abrams KR. Methods in health service research. An introduction to bayesian methods in health technology assessment. BMJ [Internet]. 1999;319(7208):508–12. Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/10454409">https://www.ncbi.nlm.nih.gov/pubmed/10454409</a></div>
+</div>
+<div id="ref-RN7060" class="csl-entry" role="listitem">
+<div class="csl-left-margin">8. </div><div class="csl-right-inline">Heuts S, Kawczynski MJ, Sayed A, Urbut SM, Albuquerque AM, Mandrola JM, et al. Bayesian analytical methods in cardiovascular clinical trials: Why, when, and how. Can J Cardiol [Internet]. 2025;41(1):30–44. Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/39521054">https://www.ncbi.nlm.nih.gov/pubmed/39521054</a></div>
+</div>
+<div id="ref-RN5257" class="csl-entry" role="listitem">
+<div class="csl-left-margin">9. </div><div class="csl-right-inline">Rafi Z, Greenland S. Semantic and cognitive tools to aid statistical science: Replace confidence and significance by compatibility and surprise. BMC Med Res Methodol [Internet]. 2020;20(1):244. Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/32998683">https://www.ncbi.nlm.nih.gov/pubmed/32998683</a></div>
+</div>
+<div id="ref-CLEAR" class="csl-entry" role="listitem">
+<div class="csl-left-margin">10. </div><div class="csl-right-inline">Jolly SS, d’Entremont MA, Lee SF, Mian R, Tyrwhitt J, Kedev S, et al. Colchicine in acute myocardial infarction. New England Journal of Medicine [Internet]. 2025;392(7):633–42. Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/39555823">https://www.ncbi.nlm.nih.gov/pubmed/39555823</a></div>
+</div>
+<div id="ref-RN32" class="csl-entry" role="listitem">
+<div class="csl-left-margin">11. </div><div class="csl-right-inline">Aw KL, Koh A, Lee HL, Kudzinskas A, De Palma R. Colchicine for symptomatic coronary artery disease after percutaneous coronary intervention. Open Heart [Internet]. 2022;9(1). Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/34992158">https://www.ncbi.nlm.nih.gov/pubmed/34992158</a></div>
+</div>
+<div id="ref-RN2435" class="csl-entry" role="listitem">
+<div class="csl-left-margin">12. </div><div class="csl-right-inline">Riley RD, Higgins JP, Deeks JJ. Interpretation of random effects meta-analyses. BMJ [Internet]. 2011;342:d549. Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/21310794">https://www.ncbi.nlm.nih.gov/pubmed/21310794</a></div>
+</div>
+<div id="ref-RN6702" class="csl-entry" role="listitem">
+<div class="csl-left-margin">13. </div><div class="csl-right-inline">IntHout J, Ioannidis JP, Rovers MM, Goeman JJ. Plea for routinely presenting prediction intervals in meta-analysis. BMJ Open [Internet]. 2016;6(7):e010247. Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/27406637">https://www.ncbi.nlm.nih.gov/pubmed/27406637</a></div>
+</div>
+<div id="ref-RN33" class="csl-entry" role="listitem">
+<div class="csl-left-margin">14. </div><div class="csl-right-inline">Tardif JC, Kouz S, Waters DD, Bertrand OF, Diaz R, Maggioni AP, et al. Efficacy and safety of low-dose colchicine after myocardial infarction. N Engl J Med. 2019;381(26):2497–505. </div>
+</div>
+<div id="ref-R" class="csl-entry" role="listitem">
+<div class="csl-left-margin">15. </div><div class="csl-right-inline">R Core Team. R: A language and environment for statistical computing [Internet]. Vienna, Austria: R Foundation for Statistical Computing; 2025. Available from: <a href="https://www.R-project.org/">https://www.R-project.org/</a></div>
+</div>
+<div id="ref-RStudio" class="csl-entry" role="listitem">
+<div class="csl-left-margin">16. </div><div class="csl-right-inline">Posit team. RStudio: Integrated development environment for r [Internet]. Boston, MA: Posit Software, PBC; 2025. Available from: <a href="http://www.posit.co/">http://www.posit.co/</a></div>
+</div>
+<div id="ref-metafor" class="csl-entry" role="listitem">
+<div class="csl-left-margin">17. </div><div class="csl-right-inline">Viechtbauer W. <a href="https://doi.org/10.18637/jss.v036.i03">Conducting meta-analyses in <span>R</span> with the <span class="nocase">metafor</span> package</a>. Journal of Statistical Software. 2010;36(3):1–48. </div>
+</div>
+<div id="ref-RN74" class="csl-entry" role="listitem">
+<div class="csl-left-margin">18. </div><div class="csl-right-inline">Carpenter B, Gelman A, Hoffman MD, Lee D, Goodrich B, Betancourt M, et al. Stan: A probabilistic programming language. J Stat Softw [Internet]. 2017;76. Available from: <a href="https://www.ncbi.nlm.nih.gov/pubmed/36568334">https://www.ncbi.nlm.nih.gov/pubmed/36568334</a></div>
+</div>
+<div id="ref-cmdstanr" class="csl-entry" role="listitem">
+<div class="csl-left-margin">19. </div><div class="csl-right-inline">Gabry J, Češnovar R, Johnson A, Bronder S. Cmdstanr: R interface to ’CmdStan’ [Internet]. 2025. Available from: <a href="https://mc-stan.org/cmdstanr/">https://mc-stan.org/cmdstanr/</a></div>
+</div>
+<div id="ref-RN52" class="csl-entry" role="listitem">
+<div class="csl-left-margin">20. </div><div class="csl-right-inline">Kelly P, Lemmens R, Weimar C, Walsh C, Purroy F, Barber M, et al. Long-term colchicine for the prevention of vascular recurrent events in non-cardioembolic stroke (CONVINCE): A randomised controlled trial. Lancet. 2024;404:125–33. </div>
+</div>
+<div id="ref-RN53" class="csl-entry" role="listitem">
+<div class="csl-left-margin">21. </div><div class="csl-right-inline">Li J, Meng X, Shi FD, Jing J, Gu HQ, Jin A, et al. Colchicine in patients with acute ischaemic stroke or transient ischaemic attack (CHANCE-3): Multicentre, double blind, randomised, placebo controlled trial. BMJ. 2024;385:e079061. </div>
+</div>
+<div id="ref-RN7043" class="csl-entry" role="listitem">
+<div class="csl-left-margin">22. </div><div class="csl-right-inline">Lou N. Colchicine goes belly-up in a more definitive heart attack trial [Internet]. 2024. Available from: <a href="https://www.medpagetoday.com/meetingcoverage/tct/112644?xid=nl_mpt_Cardiology_update_2024-11-01&amp;mh=5ea0ef63b494fbd59d59b80f4d7177fa&amp;zdee=gAAAAABm4utWmSHJnY-b0PoghpwIdJ2Z5bp7pHCJbHd4lnSWdd-TcQH64qhAqr5vStSuTwshVLoWZmIfruyxrtdHQaON6GGWin0MsBBlzSgmQd4CbqGcFWQ%3D&amp;utm_source=Sailthru&amp;utm_medium=email&amp;utm_campaign=Automated%20Specialty%20Update%20Cardiology%20BiWeekly%20FRIDAY%202024-11-01&amp;utm_term=NL_Spec_Cardiology_Update_Active">https://www.medpagetoday.com/meetingcoverage/tct/112644?xid=nl_mpt_Cardiology_update_2024-11-01&amp;mh=5ea0ef63b494fbd59d59b80f4d7177fa&amp;zdee=gAAAAABm4utWmSHJnY-b0PoghpwIdJ2Z5bp7pHCJbHd4lnSWdd-TcQH64qhAqr5vStSuTwshVLoWZmIfruyxrtdHQaON6GGWin0MsBBlzSgmQd4CbqGcFWQ%3D&amp;utm_source=Sailthru&amp;utm_medium=email&amp;utm_campaign=Automated%20Specialty%20Update%20Cardiology%20BiWeekly%20FRIDAY%202024-11-01&amp;utm_term=NL_Spec_Cardiology_Update_Active</a></div>
+</div>
+<div id="ref-RN3836" class="csl-entry" role="listitem">
+<div class="csl-left-margin">23. </div><div class="csl-right-inline">Wasserstein RL, Lazar NA. The ASA’s statement on p-values: Context, process, and purpose. The American Statistician. 2016;70:2:129–33. </div>
+</div>
+<div id="ref-RN3826" class="csl-entry" role="listitem">
+<div class="csl-left-margin">24. </div><div class="csl-right-inline">Greenland S, Senn SJ, Rothman KJ, Carlin JB, Poole C, Goodman SN, et al. Statistical tests, p values, confidence intervals, and power: A guide to misinterpretations. European journal of epidemiology. 2016;31(4):337–50. </div>
+</div>
+<div id="ref-RN5420" class="csl-entry" role="listitem">
+<div class="csl-left-margin">25. </div><div class="csl-right-inline">Wasserstein RL, Schirm AL, Lazar NA. Moving to a world beyond <span>“p &lt; 0.05.”</span> The American Statistician. 2019;73:1–19. </div>
+</div>
+<div id="ref-RN5721" class="csl-entry" role="listitem">
+<div class="csl-left-margin">26. </div><div class="csl-right-inline">Gelman A, Stern HS. The difference between significant and not significant is not itself statistically significant. The American Statistician. 2006;60(4):328–31. </div>
+</div>
+</div>
+</section>
+     </main>
+<!-- /main column -->  <script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>  </div> <!-- /content --> 
+  
+</body></html>
