@@ -1,0 +1,227 @@
+---
+title: "Bayesian Meta-Analysis in R with cmdstanr"
+author: 
+  - name: Jay Brophy
+    affiliation: McGill University
+    roles: conception, analysis, writing
+    orcid: 0000-0001-8049-6875
+    email: james.brophy@mcgill.ca
+    corresponding: true
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+format:
+  html:
+    code-fold: true
+    code-summary: "Show the code"
+    css: custom.scss
+  pdf:
+    toc: true
+    number-sections: true
+    latex-engine: pdflatex
+    colorlinks: true
+editor: source
+interactive: false
+bibliography: references.bib
+csl: vancouver.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+suppressPackageStartupMessages({
+  library(readr)
+  library(cmdstanr)
+  library(ggplot2)
+  library(ggdist)
+  library(dplyr)
+  library(posterior)
+  library(metafor)
+})
+```
+
+# Read data
+
+
+```{r}
+df_raw <- read_csv("pci_ma.csv", show_col_types = FALSE)
+
+df <- df_raw %>%
+  mutate(
+    p_t = evt_trt / N_trt,
+    p_c = evt_ctl / N_ctl,
+    log_rr = log(p_t / p_c),
+    se_rr = sqrt((1 - p_t) / (p_t * N_trt) + (1 - p_c) / (p_c * N_ctl))
+  )
+
+
+# Random-effects meta-analysis
+res <- rma(yi = df$log_rr, sei = df$se_rr, method = "REML")
+
+```
+
+# Stan code for hierarchical meta-analysis
+
+This Stan program defines a Bayesian hierarchical random-effects meta-analysis model for aggregated study-level data. Each observed effect estimate y[i] from study i is modeled as: $y_i$ ~ N($\theta_i$, $\sigma^2_i$)
+where sigma[i] is the known standard error for each study. The latent true effect in study i, denoted theta[i], is assumed to vary across studies and is modeled as: $\theta_i$ ~ N($\mu$, $\tau^2$). 
+Here, $\mu$ is the overall average effect, and $\tau$ is the between-study standard deviation, representing heterogeneity. A standard normal prior is placed on $\mu$, and a half-normal prior (via tau ~ normal(0, 1) with tau >= 0) is placed on tau. Together, these define a normal-normal hierarchical model, where partial pooling occurs: individual study estimates are shrunk toward the overall mean, with the degree of shrinkage determined by tau. This model supports posterior inference on mu, study-specific effects theta, and allows prediction for a future study by simulating from the posterior predictive distribution.
+
+
+```{r}
+# Write Stan model
+meta_code <- c(
+  "data {",
+  "  int<lower=0> J;",
+  "  vector[J] y;",
+  "  vector<lower=0>[J] sigma;",
+  "}",
+  "parameters {",
+  "  real mu;",
+  "  real<lower=0> tau;",
+  "  vector[J] theta;",
+  "}",
+  "model {",
+  "  mu ~ normal(0, 1);",
+  "  tau ~ normal(0, 1);",       # Half-normal due to lower=0 , another choice truncated cauchy(0, 1) T[0, 2];
+  "  theta ~ normal(mu, tau);",
+  "  y ~ normal(theta, sigma);",
+  "}"
+)
+writeLines(meta_code, 'model/meta_model.stan')
+
+log_rr <- df$log_rr
+se <- df$se_rr
+study_labels <- df$study
+data_list <- list(J = length(log_rr), y = log_rr, sigma =  se)
+
+mod <- cmdstan_model('model/meta_model.stan')
+fit <- mod$sample(data = data_list, chains = 4, iter_warmup = 1000, iter_sampling = 2000, 
+                  seed = 1234, refresh = 0)
+
+draws <- as_draws_df(fit$draws(c("mu", "tau")))
+
+saveRDS(draws, file="output/BMA_preClear")
+```
+
+
+```{r}
+# Plot posterior using updated ggdist syntax
+ggplot(draws, aes(x = exp(mu))) +
+  stat_slabinterval(aes(thickness = after_stat(pdf)), .width = 0.95, fill = 'steelblue') +
+  geom_vline(xintercept = 1, linetype = 'dashed') +
+  labs(title = 'Posterior Risk Ratio (RR)', x = "Risk ratio (RR)", y = 'Density') +
+  xlim(0,1.5) +
+  theme_minimal()
+
+
+# another similar method using density functions
+ggplot(draws, aes(x = exp(mu))) +
+  stat_density(geom = "area", fill = "steelblue", alpha = 0.6, bw = 0.05) +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  labs(title = "Posterior Risk Ratio (RR)",
+       x = "Risk ratio (RR)",
+       y = "Density") +
+  xlim(0,1.5) +
+  theme_minimal()
+
+```
+
+```{r}
+# Draws for each theta and mu
+theta_draws <- as_draws_df(fit$draws(c("mu", "theta")))
+
+# 95% CI for observed RR
+obs_lower <- exp(log_rr - 1.96 * se)
+obs_upper <- exp(log_rr + 1.96 * se)
+
+# Posterior mean and 95% CI for each study
+post_rr_mean <- sapply(1:7, function(i) mean(exp(theta_draws[[paste0("theta[", i, "]")]])))
+post_rr_lower <- sapply(1:7, function(i) quantile(exp(theta_draws[[paste0("theta[", i, "]")]]), 0.025))
+post_rr_upper <- sapply(1:7, function(i) quantile(exp(theta_draws[[paste0("theta[", i, "]")]]), 0.975))
+
+# Overall posterior mean and CI
+overall_rr <- exp(theta_draws$mu)
+overall_rr_mean <- mean(overall_rr)
+overall_rr_ci <- quantile(overall_rr, probs = c(0.025, 0.975))
+
+# Predictive RR
+mu_vals <- theta_draws$mu
+tau_vals <- as_draws_df(fit$draws("tau"))$tau
+set.seed(123)
+pred_draws <- rnorm(4000, mu_vals, tau_vals)
+pred_rr <- exp(pred_draws)
+pred_rr_mean <- mean(pred_rr)
+pred_rr_ci <- quantile(pred_rr, probs = c(0.025, 0.975))
+
+# Final table
+rr_table <- data.frame(
+  Study = c(study_labels, "Overall", "Predicted"),
+  Observed_RR = c(round(exp(log_rr), 2), NA, NA),
+  CI_Observed = c(sprintf("%.2f–%.2f", obs_lower, obs_upper), "", ""),
+  Borrowed_RR = c(round(post_rr_mean, 2), round(overall_rr_mean, 2), round(pred_rr_mean, 2)),
+  CI_Borrowed = c(
+    sprintf("%.2f–%.2f", post_rr_lower, post_rr_upper),
+    sprintf("%.2f–%.2f", overall_rr_ci[1], overall_rr_ci[2]),
+    sprintf("%.2f–%.2f", pred_rr_ci[1], pred_rr_ci[2])
+  )
+)
+
+knitr::kable(rr_table, digits = 2, caption = "Observed and Posterior (Shruken) RRs (95% CIs) - pre-CLEAR")
+```
+
+
+```{r save-table7}
+#| echo: false
+#| include: false
+#| message: false
+#| warning: false
+
+library(kableExtra)
+tbl_7 <- kbl(
+  rr_table,
+  caption = "Observed and Posterior (Shrunken) RRs with 95% CIs (Bayesian hierarchical model - pre-CLEAR)",
+  format  = "html"
+) %>%
+  kable_styling(
+    bootstrap_options = c("striped","hover","condensed","responsive"),
+    full_width        = FALSE,
+    position          = "center"
+  )
+
+# save the PNG — nothing from this chunk (code, messages, warnings)
+# will ever show up in your doc
+save_kable(tbl_7, "output/summary_BMA7.png", zoom = 2, quiet = TRUE)
+```
+
+
+```{r}
+# Forest plot
+plot_data <- data.frame(
+  Study = factor(c(study_labels, "Overall", "Predicted"), levels = rev(c(study_labels, "Overall", "Predicted"))),
+  Observed_RR = c(round(exp(log_rr), 2), NA, NA),
+  Observed_Lower = c(obs_lower, NA, NA),
+  Observed_Upper = c(obs_upper, NA, NA),
+  Borrowed_RR = c(post_rr_mean, overall_rr_mean, pred_rr_mean),
+  Borrowed_Lower = c(post_rr_lower, overall_rr_ci[1], pred_rr_ci[1]),
+  Borrowed_Upper = c(post_rr_upper, overall_rr_ci[2], pred_rr_ci[2])
+)
+
+ggplot(plot_data) +
+  geom_point(aes(x = Observed_RR, y = Study), color = "blue") +
+  geom_errorbarh(aes(xmin = Observed_Lower, xmax = Observed_Upper, y = Study), height = 0.2, color = "blue") +
+  geom_point(aes(x = Borrowed_RR, y = Study), color = "red") +
+  geom_errorbarh(aes(xmin = Borrowed_Lower, xmax = Borrowed_Upper, y = Study), height = 0.2, color = "red") +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  scale_x_continuous(trans = "log", breaks = c(0.5, 0.75, 1, 1.5, 2)) +
+  labs(
+    title = "Forest Plot: Bayesian Meta-Analysis (Risk Ratios)",
+    x = "Risk Ratio (RR)", y = NULL,
+    caption = "Blue = Observed; Red = Posterior"
+  ) +
+  theme_minimal()
+```
+
+# Discussion
+
+The prediction interval from the Bayesian meta-analysis (0.35 to 1.29) is, as expected, wider than that from the frequentist approach (0.59 to 0.90) because the Bayesian framework incorporates the uncertainty in all parameters, including between-study heterogeneity $\tau$ and the overall mean effect $\mu$ that are treated as fixed known entities in the frequentist method where these fixed values are simply plugged into 
+$$\text{Prediction interval} = \hat{\theta} ± t_{0.975,\text{ df}} × sqrt(SE^2 + tau^2)$$. \    
+With only a few studies, treating $\tau$ and $\mu$ as known and fixed quantities can underestimate uncertainty. The Bayesian model averages over the joint posterior distribution of these two parameters better reflecting the uncertainty in how effects vary between studies (heterogeneity), while also accounting for uncertainty in the pooled average effect itself. This provides a more realistic estimate of the associated uncertainty leading to wider Bayesian prediction intervals that better capture the expected range of effects for a new study.\    
+This Bayesian prediction interval clearly (pun intended) the need for a futre study (CLEAR) to better define the estimate of any beneficial colchicine effect.
+

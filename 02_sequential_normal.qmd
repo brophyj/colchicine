@@ -1,0 +1,475 @@
+---
+title: "CLEAR: Bayesian Update Using Normal Likelihood"
+author: 
+  - name: Jay Brophy
+    affiliation: McGill University
+    roles: conception, analysis, writing
+    orcid: 0000-0001-8049-6875
+    email: james.brophy@mcgill.ca
+    corresponding: true
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+format:
+  html:
+    code-fold: true
+    code-summary: "Show the code"
+    css: custom.scss
+  pdf:
+    toc: true
+    number-sections: false
+    latex-engine: pdflatex
+    colorlinks: true
+editor: source
+interactive: false
+bibliography: references.bib
+csl: vancouver.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+suppressPackageStartupMessages({
+  library(cmdstanr)
+  library(ggplot2)
+  library(dplyr)
+  library(posterior)
+  library(tibble)
+  library(ggdist)
+  library(bayesplot)
+})
+```
+
+# Data and Prior Specification
+
+This program examines the CLEAR[@CLEAR] data from a Bayesian perspective using three different priors:\     
+- a vague prior (N(0, 2)) for the mean summary statistic, log(RR), which allows CLEAR data to dominate and approximates the published frequentist result  \    
+- a fully informative mean summary prior using previous data as summarized by the prediction interval of a meta-analysis[@RN32] of seven earlier RCTs examining colchicine in acute coronary syndrome  \    
+- a "focused" mean summary prior based on the largest, highest-quality previous RCT (COLCOT[@RN33]) with the most positive results \    
+
+```{r}
+# CLEAR data
+n1 <- 3528; e1 <- 322
+n2 <- 3534; e2 <- 327
+p1 <- e1 / n1
+p2 <- e2 / n2
+rr <- p1 / p2
+log_rr <- log(rr)
+se_log_rr <- sqrt((1 - p1) / (p1 * n1) + (1 - p2) / (p2 * n2))
+
+df_forest <- readRDS("output/ma_freq.rds") # read in previous MA data from 00_ program
+
+sigma_from_ci <- function(lower, upper) {
+  (log(upper) - log(lower)) / (2 * qnorm(0.975))
+}
+
+mu_meta <- log(df_forest[8, "RR"])
+sigma_meta <- sigma_from_ci(df_forest[8, "Lower"], df_forest[8, "Upper"])
+
+mu_colcot <- log(df_forest[3, "RR"])
+sigma_colcot <- sigma_from_ci(df_forest[3, "Lower"], df_forest[3, "Upper"])
+
+mu_weak <- 0
+sigma_weak <- 2
+```
+
+# Stan Model
+
+Given the large sample sizes, the results can be represented as normal distributions. This Stan model defines a Bayesian updating procedure for this single normally distributed summary statistic. It assumes that the observed summary statistic *y*, the log risk ratio, modeled as *y* ~ N($\mu$, $\sigma^2$), with assumed known standard error sigma. A normal prior is placed on $\mu$ ~ N($\mu_{prior}$, $\sigma^2_{prior}$). The model returns the posterior distribution for mu, combining prior information and observed data in accordance with Bayes' theorem. \    
+Although this setup defines a conjugate model — meaning the posterior is also normally distributed and could be derived analytically — Stan does not use this closed-form solution. Instead, it uses numerical methods (specifically, Hamiltonian Monte Carlo) to sample from the posterior distribution of $\mu$, allowing maximum flexibility and extendibility (e.g., to non-conjugate or hierarchical models).\   
+Identical results are obtained when presenting the data with a binomial instead of a normal distribution.
+
+```{r}
+stan_code <- c(
+  "data {",
+  "  real y;", 
+  "  real<lower=0> sigma;", 
+  "  real mu_prior;", 
+  "  real<lower=0> mu_prior_sd;", 
+  "}", 
+  "parameters {",
+  "  real mu;", 
+  "}", 
+  "model {",
+  "  mu ~ normal(mu_prior, mu_prior_sd);", 
+  "  y ~ normal(mu, sigma);", 
+  "}"
+)
+writeLines(stan_code, "model/clear_normal.stan")
+mod <- cmdstan_model("model/clear_normal.stan")
+```
+
+# Run Models
+
+```{r}
+data_meta_rr <- list(y = log_rr, sigma = se_log_rr, mu_prior = mu_meta, mu_prior_sd = sigma_meta)
+data_weak_rr <- list(y = log_rr, sigma = se_log_rr, mu_prior = mu_weak, mu_prior_sd = sigma_weak)
+data_colcot_rr <- list(y = log_rr, sigma = se_log_rr, mu_prior = mu_colcot, mu_prior_sd = sigma_colcot)
+
+fit_meta_rr <- mod$sample(data = data_meta_rr, chains = 4,  seed = 1234, 
+                          iter_sampling = 2000, refresh = 0)
+fit_weak_rr <- mod$sample(data = data_weak_rr, chains = 4,  seed = 1234, 
+                          iter_sampling = 2000, refresh = 0)
+fit_colcot_rr <- mod$sample(data = data_colcot_rr, chains = 4, seed = 1234, 
+                          iter_sampling = 2000, refresh = 0)
+```
+
+# Diagnostics {.unnumbered}
+
+```{r}
+cat("Informative prior with complete meta-analytical data")
+fit_meta_rr$print()
+cat("Vague prior")
+fit_weak_rr$print()
+cat("Optimistic prior with COLCOTl data")
+fit_colcot_rr$print()
+
+cat("Informative prior diagnostics")
+rhat(fit_meta_rr$draws("mu"))
+ess_bulk(fit_meta_rr$draws("mu"))
+mcmc_trace(fit_meta_rr$draws("mu"))
+
+cat("Vague prior diagnostics")
+rhat(fit_weak_rr$draws("mu"))
+ess_bulk(fit_weak_rr$draws("mu"))
+mcmc_trace(fit_weak_rr$draws("mu"))
+
+cat("Optimistic prior diagnostics")
+rhat(fit_colcot_rr$draws("mu"))
+ess_bulk(fit_colcot_rr$draws("mu"))
+mcmc_trace(fit_colcot_rr$draws("mu"))
+```
+
+# Prior Visualization {.unnumbered}
+
+```{r}
+x_vals <- seq(-1.5, 1.5, length.out = 500)
+priors_df <- bind_rows(
+  tibble(x = x_vals, density = dnorm(x, mu_meta, sigma_meta), prior = "Meta-analysis"),
+  tibble(x = x_vals, density = dnorm(x, mu_colcot, sigma_colcot), prior = "COLCOT"),
+  tibble(x = x_vals, density = dnorm(x, mu_weak, sigma_weak), prior = "Weak")
+)
+
+ggplot(priors_df, aes(x = x, y = density, color = prior)) +
+  geom_line(linewidth = 1) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  labs(x = "log(RR)", y = "Density", title = "Prior Distributions for log(RR)",
+       caption = "RR = risk ratio") +
+  xlim(-1,0.5) +
+  theme_minimal()
+```
+
+# Posterior Risk Ratio Distributions
+
+```{r}
+draws_rr <- bind_rows(
+  tibble(RR = exp(as_draws_df(fit_meta_rr$draws("mu"))$mu), prior = "Meta-analysis prior"),
+  tibble(RR = exp(as_draws_df(fit_weak_rr$draws("mu"))$mu), prior = "Weak prior"),
+  tibble(RR = exp(as_draws_df(fit_colcot_rr$draws("mu"))$mu), prior = "COLCOT prior")
+)
+
+ggplot(draws_rr, aes(x = RR, fill = prior, color = prior)) +
+  stat_slabinterval(aes(thickness = after_stat(pdf)), .width = 0.95, alpha = 0.6, position = "identity") +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  labs(title = "Posterior Risk Ratios (RR) for CLEAR Trial under 3 Priors",
+       x = "Risk Ratio (RR)", y = "Density") +
+  theme_minimal()
+```
+
+# Combining prior & posterior
+
+```{r fig.height=6}
+library(ggplot2)
+library(dplyr)
+
+draws_rr2 <- draws_rr  # just rename for clarity
+
+# Prepare prior densities on the RR scale
+rr_vals <- seq(0.1, 2, length.out = 500)               # RR grid
+priors_rr <- bind_rows(
+  tibble(
+    RR      = rr_vals,
+    density = dnorm(log(rr_vals), mu_meta, sigma_meta) / rr_vals,
+    prior   = "Meta-analysis"
+  ),
+  tibble(
+    RR      = rr_vals,
+    density = dnorm(log(rr_vals), mu_colcot, sigma_colcot) / rr_vals,
+    prior   = "COLCOT"
+  ),
+  tibble(
+    RR      = rr_vals,
+    density = dnorm(log(rr_vals), mu_weak, sigma_weak) / rr_vals,
+    prior   = "Weak"
+  )
+)
+
+# Plot on RR scale
+ggplot() +
+  # A) Posterior densities (filled + outlined) in RR
+  stat_density(
+    data     = draws_rr2,
+    aes(
+      x     = RR,
+      fill  = prior,
+      color = prior,
+      group = prior
+    ),
+    geom     = "area",
+    position = "identity",
+    alpha    = 0.3,
+    adjust   = 1
+  ) +
+  # B) Prior curves on top (in RR‐scale)
+  geom_line(
+    data      = priors_rr,
+    aes(
+      x     = RR,
+      y     = density,
+      color = prior
+    ),
+    linewidth        = 1,
+    show.legend = FALSE
+  ) +
+  # C) Vertical line at RR = 1
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  # D) Colour scale + legend title
+  scale_color_manual(
+    name   = "Posterior with priors",
+    values = c(
+      "Meta-analysis" = "#F8766D",
+      "COLCOT"        = "#00BA38",
+      "Weak"          = "#619CFF"
+    )
+  ) +
+  # E) drop the fill‐legend
+  guides(fill = "none") +
+  # F) Labels
+  labs(
+    title   = "Prior and Posterior Distributions on RR Scale",
+    x       = "Risk Ratio (RR)",
+    y       = "Density",
+    caption = "Lines = prior distributions \nShaded areas = posterior distributions\nBlue posterior approximates CLEAR data alone"
+  ) +
+  # G) x–limits
+  coord_cartesian(xlim = c(0.5, 1.3)) +
+  # H) minimal theme + no legend box
+  theme_minimal() +
+  theme(
+    legend.position = "none"
+  ) +
+  # manual legend via annotate(), otherwise I lose the fill in characteristics for reason X
+  annotate(
+    "text", x = 1.3, y = max(priors_rr$density)*0.9,
+    label = "Posterior with priors", fontface = "bold", hjust = 1
+  ) +
+  annotate(
+    "text", x = 1.3, y = max(priors_rr$density)*0.85,
+    label = "COLCOT (green)", color = "#00BA38", hjust = 1
+  ) +
+  annotate(
+    "text", x = 1.3, y = max(priors_rr$density)*0.80,
+    label = "Meta-analysis (red)", color = "#F8766D", hjust = 1
+  ) +
+  annotate(
+    "text", x = 1.3, y = max(priors_rr$density)*0.75,
+    label = "Weak (blue)", color = "#619CFF", hjust = 1
+  )
+
+ggsave("output/prior_posterior_plot_RR.png")
+
+```
+
+# Summary Table {.unnumbered}
+
+```{r message=FALSE, include=FALSE}
+summary_rr <- draws_rr %>%
+  group_by(prior) %>%
+  summarise(
+    Mean = round(mean(RR), 2),
+    Lower = round(quantile(RR, 0.025), 2),
+    Upper = round(quantile(RR, 0.975), 2),
+    `P(RR < 0.8)` = round(mean(RR < 0.8), 2),
+    `P(RR < 0.85)` = round(mean(RR < 0.85), 2),
+    `P(RR < 0.9)` = round(mean(RR < 0.9), 2),
+    `P(RR < 1.0)` = round(mean(RR < 1.0), 2),
+    `P(RR < 1.15)` = round(mean(RR < 1.15), 2),
+    CrI = sprintf("%.2f [%.2f, %.2f]", mean(RR), quantile(RR, 0.025), quantile(RR, 0.975))
+  )
+
+summary_rr <- summary_rr %>% 
+  dplyr::select(-c(2:4)) %>% 
+  rename("Mean [95% CrI]" = CrI) %>% 
+  relocate("Mean [95% CrI]", .before = "P(RR < 0.8)")
+
+# knitr::kable(summary_rr, caption = "Posterior Risk Ratio (RR) summaries and probabilities for CLEAR trial under different priors")
+
+# webshot::install_phantomjs()                   # once‐only
+
+
+```
+
+
+
+```{r save-table}
+
+#| echo: false
+#| include: false
+#| message: false
+#| warning: false
+
+library(kableExtra)
+
+tbl <- kbl(
+  summary_rr,
+  caption = "Posterior Risk Ratio (RR) summaries and probabilities (P) for CLEAR trial under different priors",
+  format  = "html"
+) %>%
+  kable_styling(
+    bootstrap_options = c("striped","hover","condensed","responsive"),
+    full_width        = FALSE,
+    position          = "center"
+  )
+
+# save the PNG — nothing from this chunk (code, messages, warnings)
+# will ever show up in your doc
+save_kable(tbl, "output/summary_rr.png", zoom = 2, quiet = TRUE)
+
+```
+
+
+```{r}
+#| echo: false
+
+# now display the result without any extra text
+knitr::include_graphics("output/summary_rr.png")
+
+```
+
+
+# Posterior Predictive Intervals {.unnumbered}
+
+```{r}
+# Add predictive uncertainty assuming same SE as CLEAR
+set.seed(123)
+se_new <- se_log_rr
+
+predictive_draws <- bind_rows(
+  tibble(mu = as_draws_df(fit_meta_rr$draws("mu"))$mu, prior = "Meta-analysis prior"),
+  tibble(mu = as_draws_df(fit_weak_rr$draws("mu"))$mu, prior = "Weak prior"),
+  tibble(mu = as_draws_df(fit_colcot_rr$draws("mu"))$mu, prior = "COLCOT prior")
+) %>%
+  group_by(prior) %>%
+  mutate(log_rr_pred = rnorm(n(), mean = mu, sd = se_new),
+         RR_pred = exp(log_rr_pred))
+
+# Summarize predictive intervals
+pred_summary <- predictive_draws %>%
+  group_by(prior) %>%
+  summarise(
+    `Predictive 2.5%` = round(quantile(RR_pred, 0.025), 2),
+    `Predictive 50%` = round(quantile(RR_pred, 0.50), 2),
+    `Predictive 97.5%` = round(quantile(RR_pred, 0.975), 2)
+  )
+
+```
+
+
+```{r save-table2}
+#| echo: false
+#| include: false
+#| message: false
+#| warning: false
+
+tbl2 <- kbl(
+  pred_summary,
+  caption = "Posterior Predictive Intervals for Risk Ratio in a Future Study under Different Priors (includes trial-level uncertainty)",
+  format  = "html"
+) %>%
+  kable_styling(
+    bootstrap_options = c("striped","hover","condensed","responsive"),
+    full_width        = FALSE,
+    position          = "center"
+  )
+
+# save the PNG — nothing from this chunk (code, messages, warnings)
+# will ever show up in your doc
+save_kable(tbl2, "output/summary_pred.png", zoom = 2, quiet = TRUE)
+```
+
+
+```{r}
+#| echo: false
+knitr::include_graphics("output/summary_pred.png")
+
+```
+# Posterior Predictive Interval Plots {.unnumbered}
+
+```{r}
+ggplot(predictive_draws, aes(x = RR_pred, fill = prior, color = prior)) +
+  stat_slabinterval(aes(thickness = after_stat(pdf)), .width = 0.95, alpha = 0.5) +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  labs(title = "Posterior Predictive Risk Ratios for a Future Study",
+       x = "Risk Ratio (RR)", y = "Density",
+       caption = "Prediction includes both posterior and sampling uncertainty") +
+  theme_minimal()
+
+```
+
+# Combined Comparison of Posterior vs Predictive Intervals
+
+```{r}
+# Posterior summary
+posterior_summary <- draws_rr %>%
+  group_by(prior) %>%
+  summarise(
+    Mean = round(mean(RR), 2),
+    Lower = round(quantile(RR, 0.025), 2),
+    Upper = round(quantile(RR, 0.975), 2),
+    Interval = "Posterior CrI"
+  )
+
+# Predictive summary
+predictive_summary <- predictive_draws %>%
+  group_by(prior) %>%
+  summarise(
+    Mean = round(mean(RR_pred), 2),
+    Lower = round(quantile(RR_pred, 0.025), 2),
+    Upper = round(quantile(RR_pred, 0.975), 2),
+    Interval = "Predictive PI"
+  )
+
+# Combine and display
+combined_summary <- bind_rows(posterior_summary, predictive_summary)
+
+
+knitr::kable(combined_summary, caption = "Comparison of Posterior vs Predictive Intervals for RR")
+
+```
+
+
+```{r eval=FALSE, echo=FALSE}
+# if want heavier tails use
+predictive_draws_robust <- predictive_draws %>%
+  group_by(prior) %>%
+  mutate(
+    log_rr_pred_t = mu + se_new * rt(n(), df = 5),
+    RR_pred_t = exp(log_rr_pred_t)
+  )
+
+# Visualization
+library(ggplot2)
+ggplot(predictive_draws_robust, aes(x = RR_pred_t, fill = prior, color = prior)) +
+  stat_slabinterval(aes(thickness = after_stat(pdf)), .width = 0.95, alpha = 0.5) +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  labs(title = "Robust Posterior Predictive RR (t-distribution, df=5)",
+       x = "Risk Ratio (RR)", y = "Density") +
+  theme_minimal()
+```
+
+# Discussion
+
+Diagnostics confirm good convergence and mixing across all models. The vague prior reproduces the original CLEAR[@CLEAR] frequentist estimate but enables additional inferences as we are in possession of the complete probability distribution. CLEAR alone (with a vague prior) leaves non-trivial uncertainty (10% chance of a potentially clinically meaningful RR < 0.9). Including the totality of the previous evidence as represented by the meta-analytic prior reveals a 78% probability of at least a 10% reduction in MACE and a 41% probability of a 15% decrease. The focused COLCOT prior results in 39% and 12% probabilities of that same reductions.
+
+This analysis highlights the value of Bayesian inference in contextualizing new trial results with prior evidence. Although CLEAR tempers the strong effect seen in COLCOT[@RN33], it does not refute benefit entirely. Instead, the posterior shifts in ways consistent with both the prior and data, enabling interpretative probability statements rather than dichotomous conclusions.
+
+Despite eight trials and over 13,700 randomized patients, the precise magnitude of benefit remains uncertain, although the probability of any cardiovascular harm seems to have been reasonably excluded. Bayesian approaches do help quantify and visualize this uncertainty while leveraging accumulated knowledge and avoiding the formulation of over certainty conclusions.
+
+# References

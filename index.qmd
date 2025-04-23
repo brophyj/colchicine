@@ -1,0 +1,181 @@
+---
+title: The trials of interpreting clinical trials - A Bayesian perspective
+author: 
+  - name: Jay Brophy
+    affiliation: McGill University
+    roles: conception, analysis, writing
+    orcid: 0000-0001-8049-6875
+    email: james.brophy@mcgill.ca
+    corresponding: true
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+format:
+  html:
+    code-fold: false
+    code-summary: "Show the code"
+    css: custom.scss
+  pdf:
+    toc: true
+    number-sections: true
+    latex-engine: pdflatex
+    colorlinks: true
+  docx: default
+editor: source
+interactive: false
+bibliography: references.bib
+csl: vancouver.csl
+---
+
+## Front page
+
+The trials of interpreting clinical trials – \    
+A Bayesian perspective on colchicine following an acute coronary syndrome \    
+
+
+James M Brophy MD PhD$^{1,2,3}$ 1,2,3, Nandini Dendukuri PhD$^{1,2,}$\     
+
+1 McGill University Health Center Centre for Health Outcomes Research (CORE)\    
+5252 Boul. de Maisonneuve West,\    
+Montréal QC H4A 3S5\   
+Email address: james.brophy@mcgill.ca\   
+
+2 Department of Medicine, \   
+McGill University, Montréal, QC\   
+
+3 Department of Epidemiology, Biostatistics and Occupational Health, \   
+McGill University, Montréal, QC \    
+
+
+Word count: 2403 (including references) \   
+Tables: 3 \    
+Figures: 2 \    
+
+<newpage>
+
+## Abstract
+
+**Objectives:** Evidence based medicine (EBM) places systematic reviews and meta-analyses, ideally of randomized clinical trials (RCTs), at the top of the evidential pyramid but resolving situations with apparently “conflicting” evidence can be problematic. Bayesian methods may assist in better understanding uncertainty and improve results harmonization.  \    
+
+**Design:** A 2022 meta-analysis concluded that colchicine reduced the cardiac risk in patients undergoing acute percutaneous coronary interventions (PCI). Nevertheless, a large, RCT (CLEAR) continued to randomize acute PCI patients to colchicine or placebo and in 2025 published their findings of no benefit. Bayesian sequential analyses and hierarchical meta-analysis can inform the decision to complete this trial and augment the nuances surrounding its interpretation. \    
+
+**Setting:** RCTs of coronary artery disease (CAD) patients with an acute coronary syndrome admission undergoing percutaneous coronary intervention (PCI). \    
+
+**Interventions:** Randomization to colchicine or placebo.\    
+
+**Main outcomes:** The primary outcome was major adverse cardiovascular events (MACE), a composite of death from cardiovascular causes, recurrent myocardial infarction, stroke, or unplanned ischemia-driven coronary revascularization.\    
+
+**Results:** While a published 2022 meta-analysis suggested a statistical, and likely clinically, meaningful decrease in MACE with colchicine (pooled risk ratio 0.73 [95% confidence interval (CI) 0.62, 0.86]), a Bayesian reanalysis showed a 95% credible interval (95% CrI 0.26, 1.70) for the next study, fully justifying the continuation of CLEAR. CLEAR results were interpreted as not reducing the incidence MACE (hazard ratio, 0.99; 95% confidence interval [CI], 0.85 to 1.16). Bayesian sequential re-analyses using a vague prior (i..e. result dominated by CLEAR), an all-inclusive prior (based on the previous meta-analysis), and a focused prior (considering only the largest and most similar previous RCT) showed 58%, 100% and 92% probabilities of a decrease in MACE with colchicine. The probabilities that these decreases were clinicall meaningful, based on exceeding an absolute 15% MACE reduction, was more modest with probabilities ranging between 3% and 40%.\    
+
+**Conclusions:** The totality of the colchicine evidence in acute cardiac care strongly suggests benefit, but it is unlikely to be of clinical importance. Bayesian analyses better capture uncertainties, incorporate prior evidence, avoid common cognitive biases thereby and facilitating clinical trial interpretation.
+
+
+## Introduction
+
+The evidence based medicine (EBM) paradigm places systematic reviews and meta-analyses, ideally of randomized clinical trials, at the top of the evidential pyramid[@RN7635]. While symbolically straight forward, there are numerous intricacies in properly assessing the quality and interpretation of individual RCTs and meta-analyses. Reporting guidelines[@RN69][@RN7095] have been proposed with the hope that their adhesion will improve quality. However, there remain difficulties in scientific communication leading to misinterpretations of both clinical trials[@RN6971] and meta-analyses[@RN6883]. The underlying causes are multifactorial likely a combination of a lack of systematic integration of previous and current trials[@RN6664][@RN3816], an under appreciation and esitmation of uncertainties[@RN7060] and cognitive biases associated with the standard null hypothesis significance testing paradigm[@RN5257]. \     
+
+The importance of these issues will be demonstrated with the contemporary example of colchicine in the prevention of cardiovascular events in high risk patients. The incremental advantages of Bayesian approaches over more traditional methods to decide when additional research is required, how to interpret the new results, how to synthesize and communicate the totality of the evidence will be presented. At each stage the incremental benefits of the Bayesian approach over the traditional statistical approach will be highlighted. While additional statistical insights are demonstrated, these remain ancillary to the crucial element of clinical judgement. Analogously to statistical significance not equating unreservedly to causality, clinical judgement must precede statistical analyses in deciding what is a “reasonable” research question, design, analysis and when are different studies “combinable”.\    
+
+These topics will be explored in the context of colchicine in patients with symptomatic (acute) coronary artery disease (CAD) who have had acute percutaneous coronary interventions (PCI) with particular attention to the execution and interpretation of a recent study[@CLEAR].
+
+## Methods
+
+We initially reproduced the 2022 systematic review and meta-analysis[@RN32] of colchicine for patients with symptomatic CAD who underwent  acutePCI, published before the completion of the 2025 CLEAR[@CLEAR] trial. This not only assured reproducibility of prior evidence but also permitted the addition of the valuable[@RN2435][@RN6702], but missing, prediction interval[@RN32]. The prediction interval represents the expected range for the next study by considers both within and between study variation and is expressed algebraically as\    
+$$\text{Prediction interval} = \hat{\theta} ± t_{0.975,\text{ df}} × sqrt(SE^2 + tau^2)$$
+where:\     
+$\hat{\theta}$  is the pooled log(RR),    \
+SE is its standard error, \     
+$\tau^2$ is the between-study variance, and \      
+$t_{0.975, df}$ is the critical value from the t-distribution with 
+k−2 degrees of freedom.\    
+
+The prediction interval can then be back-transformed to the Risk Ratio (RR) scale. \    
+
+However, this frequentist prediction interval assumes the parameters are perfectly known and fixed, thereby limiting their natural variability. Bayesian hierarchical random-effects model for aggregated study-level data acknowledge the uncertainty with each observed study effect estimate, $y_i$, modeled as ~ $N(\theta_{i}, \sigma^2_{i})$, where $\sigma_i$ is the known standard error for each study. \     
+
+The latent true $study_i$ effect, denoted by $\theta_i$, is assumed to vary across studies and is itself modeled as ~ N($\mu$, $\tau^2$), where $\mu$ is the overall average effect, and $\tau$ is the between-study standard deviation, also known as the heterogeneity. Vague priors can be assigned to these parameters; a standard normal prior for $\mu$ ~ N(0,1), and a half-normal prior (via $\tau$ ~ normal(0, 1) with $\tau$ >= 0) for $\tau$. Together, these define a normal-normal hierarchical model, where partial pooling occurs such that individual study estimates are shrunk toward the overall mean, with the degree of shrinkage determined by $\tau$. This model supports posterior inference on $\mu$, study-specific effects $\theta_i$, and provides a prediction interval for a future study by simulating from the posterior predictive distribution, while acknowledging the uncertainty of the model parameters. Typically Bayesian prediction intervals will therefore by wider than their frequnetist counterparts. This provided an update of the 2022 meta-analysis[@RN32] with prediction intervals as well as current meta-analysis that included CLEAR[@CLEAR].\  
+
+Rather than concentrating on the prediction interval for the next study, interest may center on the interpretation of the most recent CLEAR[@CLEAR] study, but not as an isolated entity as done in the original publication, but rather in the context of what was previously known. This sequential updating of prior evidence with new data is the essence of Bayesian inference. The binary observed summary statistic *y*, the log risk ratio from CLEAR[@CLEAR] can be represented by a binomial distribution. However given the large sample size, the the log risk ratio is equally well approximated by a normal distribution, modeled as *y* ~ N($\mu$, $\sigma^2$), with assumed known standard error $\sigma$. A normal prior is again placed on $\mu$ ~ N($\mu_{prior}$, $\sigma^2_{prior}$). The model returns a posterior distribution for $\mu$, combining prior information and observed data in accordance with Bayes' theorem. Identical results were obtained with a binomial instead of a normal distribution of the data (results not shown). \  
+
+As priors may be considered subjective, multiple priors, a community of priors, can assess concerns of subjectivity and the robustness of the analyses. Adopting the CLEAR investigators' published viewpoint of trial interpretation independent of any prior knowledge implies a vague prior so that the posterior probability distribution is dominated by the observed CLEAR data. CLEAR[@CLEAR] investigators also acknowledged previous evidence, particularly the COLCOT[@RN33] trial. It therefore seems appropriate to consider two additional priors, COLCOT[@RN33] and one that uses all prior relevant evidence as summarized in the previous meta-analysis[@RN32]. These three priors can be specified as follows;\    
+- a vague prior (N(0, 2)) for the mean summary statistic, log(RR), which allows CLEAR data to dominate and approximate the published frequentist result \    
+- a fully informative mean summary prior using all previous data as summarized by the prediction interval of the earlier meta-analysis[@RN32] \    
+- a “focused” mean summary prior based on the largest, highest-quality, most similar previous RCT, COLCOT[@RN33], which also has the most positive results  \   
+
+All analyses were preformed within the `R` ecosystem[@R] and the `RStudio` Integrated Development Environment[@RStudio]. The reproduction of the frequentist random effects was performed with the `metafor` package[@metafor]. The Bayesian hierarchical meta-analysis to synthesize the evidence estimated by the pooled log risk ratio used the Stan programing language[@RN74] with Hamiltonian Monte Carlo sampling of the posterrior distribution and the `cmdstanr` package[@cmdstanr]. Although the sequential updating approach defines a conjugate model — meaning the posterior is also normally distributed and could be derived analytically — we have not used this closed-form solution. Instead, we again used numerical methods[@RN74] (specifically, Hamiltonian Monte Carlo) to sample from the posterior distribution of $\mu$, allowing maximum flexibility and extendibility (e.g., to non-conjugate or hierarchical models). all statistical code is available at [github.com/brophyj](https://github.com/brophyj) \   
+
+
+## Results
+
+### Previous studies
+
+The 2022, pre-CLEAR[@CLEAR], systematic review and meta-analysis[@RN32] of the effects of colchicine in patients with symptomatic acute CAD who underwent PCI reported reduced MACE outcomes (RR 0.73 (95% CI 0.61 to 0.87); p=0.0003) with minimal heterogeneity ($I^2$=6%). Our calculated frequentist pooled summary estimate was identical to the published result and the frequentist prediction interval was only marginally widened (0.60 - 0.90) due to the limited observed between study heterogeneity. Based on the upper 95% CI of this model, the next colchicine study was predicted to almost certainly have at least a 10% reduction in cardiovascular outcomes. However, the fragility of that conclusion becomes apparent if a different model for the between study variation with heavier tails than the current $t_{(n-k)df}$ choice is assumed. For example with a critical value of $t_{0.975,2}$ the upper 95% CI for the predicted interval becomes 1.04, suggesting the need for further studies to reduce the uncertainty of the summary estimate. \    
+
+Moreover with only a few studies, treating $\tau$ and $\mu$ as known and fixed quantities can seriously underestimate uncertainty. A Bayesian model averages over the joint posterior distribution of these two parameters better reflecting the uncertainty in how effects vary between studies (heterogeneity), while also accounting for uncertainty in the pooled average effect itself. This results in a wider and more realistic prediction intervals (0.35 - 1.29) that better captures the expected range of effects for a new study (Table 1). Unlike the frequentist analysis, this approach confirms the need for additional research to better define the estimate for any beneficial colchicine effect.\   
+
+### The new evidence
+
+Between February 1, 2018, and November 8, 2022, CLEAR[@CLEAR] patients were randomized to colchicine (n = 3,528) or placebo (n = 3,534) immediately after PCI. The primary outcome was MACE, a composite of cardiovascular death, MI, stroke, or ischemia-driven revascularization. With a median 3 year follow-up, there were 9.1% events in the colchicine group and 9.3% in the placebo arm (HR 0.99, 95% CI 0.85-1.16). Given the high quality study design, execution, and large number of primary outcome events (n=649), the authors reasoned that the probability of a spurious result was low. Thus, they concluded "... treatment with colchicine, when started soon after myocardial infarction and continued for a median of 3 years, did not reduce the incidence of the composite primary outcome."[@CLEAR]\     
+
+CLEAR authors acknowledge that the most comparable previous study was COLCOT[@RN33], a randomized trial of 4745 patients within 30 days of an acute myocardial infarction, who received the same interventions with essentially the same composite primary enpoint and a median 22.6 months follow-up. COLCOT[@RN33] had fewer total primary-outcome events (n=301), but nevertheless found a 23% relative risk reduction (HR 0.77, 95% CI 0.61 - 0.96). In the CLEAR discussion[@CLEAR], there was no attempt to explain these "differences" other than observing that two colchicine trials in stroke patients[@RN52][@RN53] also showed no benefit with colchicine and that CLEAR was a larger trial, presumably with an improved precision of any treatment effect.\      
+
+Should clinicians adopt the CLEAR[@CLEAR] investigators' view that the larger trial is to be believed and that the previous evidence from the 4745 COLCOT[@RN33] subjects or the 6660 meta-analysis[@RN32] subjects should simply be forgotten? The CLEAR PI was explicit in an interview following an oral presentation of their findings stating "I was a believer in colchicine but after CLEAR I decided to stop it in my parent"[@RN7043]. Presumably his prior belief wasn't universally shared, or at least believed at a clinically significant threshold, as otherwise equipoise would have been lacking to proceed with the CLEAR trial. In any case, this dichotomization of thinking for accepting or rejecting null hypotheses significance testing and for clinical decision making is common among clinicians.\   
+
+### Sequential evidentary updating - A Bayesian approach
+
+The above approach where decisions are conditioned on the comparison of p values (probability of the observed or more extreme data \| null hypothesis) to prespecified type I errors, typically 0.05 is standard in medical research. Unfortunately this approach may result in cognitive errors[@RN3836][@RN3826][@RN5420]. On the other hand, a Bayesian approach provides the information clinicians are actually seeking, namely the probability that the hypothesis is true given the observed data, the so called "inverse probability". This posterior distribution, derived from a weighted combination of a prior belief and the current data, incorporates prior knowledge according to the rules of probability via Bayes Theorem, and avoids the aforementioned cognitive errors[@RN6664]. A further advantage of probability distributions is they are not restricted to specific point estimates but permit calculations for multiple different cutpoints or intervals. For example, one might be particularly interested in probabilities exceeding a clinically meaningful thresholds for benefit or harm. Such clinical cutpoints can be individually selected but for demonstration purposes with the colchcine example a benefit threshold of RR \< 0.9 and harm threshold of RR \> 1.1 has been chosen.\    
+
+Figure 1 graphically displays the three priors and the three updated posteriors after the incorporation of the CLEAR data. The informative posteriors are a weighted average of prior and CLEAR data (blue distribution) with weights proportional to their precisions and therefore a shifting of the priors towards the CLEAR data (likelihood ). Informative posterior distributions also show the expected improved precision with a narrowing distributions due to the inclusion of the new data. The posterior distribution with a vague prior corresponds to the CLEAR data alone, the so-called likelihood.  \    
+
+Numerical results are derived from integration of the area under the posterior curves (AUC) to the left of any selected threshold and are given in Table 2. The posterior results using informative priors suggests a 92% to 100% probability of decreased MACE outcomes (AUC < 1). Moreover, these analyses suggest a possible 12% to 41% probability that the MACE decrease is at least 15% (AUC < 0.85). Regardless of the chosen prior, there is virtually no chance that colchicine increases cardiac risk by a clinically meaningful amount (AUC < 1.15).
+
+
+### Bayesian Meta-analysis
+
+Updating prior beliefs is temporally consistent with data availability and mirrors human sequential learning. A different perspective that also combined all available data but concentrates on the summary result and predictability of the next future study is provided by meta-analytical techniques.  This approach ignores data temporality and is problematic  when the total number of trials is small. A Bayesian random effects (hierarchical) meta-analysis is preferred over the frequentist model, since as discussed above it models all parameter uncertainty. Individual studies are considered part of a larger population of studies and individual study estimates are "pulled" and "shrunken" toward the overall mean effect. Hierarchical models represent a compromise between complete pooling (fixed effect) or no pooling (complete study independence). Hierarchical models thereby account for both within and between study variability producing pooled mean estimates that integrate information from different studies while acknowledging their variability. These models also can provide the predictive interval for the next study from the super population of possible studies. \   
+
+The Forest plot for the updated Bayesian meta-analysis with CLEAR[@CLEAR] in shown in Figure 2 with numerical results in Table 3. The figure demonstrates the shrinkage of each observed trial result towards the global mean. It also shows a point estimate for global mean that is close to the pre-CLEAR pooled value but with wider 95% CI and the prediction intervals due to the increased between trial heterogeneity \    
+
+## Conclusion
+
+While the published conclusion of the CLEAR[@CLEAR] trial was that colchicine did not reduce the incidence of MACE, this Bayesian re-analysis with two well justifierd informative priors suggests there is a strong probability (57% to 100%) that colchicine does reduce MACE, although the probability that this benefit exceeds a clinically meaningful 10% reduction is only modest (between 39% to 79%). More meaningful risk reductions are less likely but not impossible (12% to 41% probability of a 15% reduction). This Bayesian approach allows a more complete and nuanced examination not only of the recent CELAR[@CLEAR] study on on its own merit but also in the context of existing evidence. While it may seem disconcerting that after 13,000 randomized patients we do not have an unequivocal answer to the research question, this nonetheless reflects reality. These results should not be interpreted as a rejection of the colchicine hypothesis as implied by CLEAR[@CLEAR] but rather alternatively as showing that while a large clinical benefit is unlikely the possibility of a modest colchicine clinical benefit has not been definitively excluded.   \    
+
+This study also highlights the importance of considering prediction intervals and a Bayesian approach in meta-analysis. Had the CLEAR investigators relied on the pooled summary estimate from the 2022 frequentist meta-analysis[@RN32], they would have prematurely and inappropriately stopped the trial for ersatz efficacy. Prediction intervals are important in meta-analyses to assess the likely range of a future study. However as this example shows, frequentist methods often under-estimate the uncertainty associated with these intervals and may lead to inappropriate over confident conclusions.  \   
+
+Given that CLEAR[@CLEAR] and COLCOT[@RN33] were both well designed, well executed trials examining the same intervention in the same study populations and published in the same esteemed medical journal, its seems absurd to ignore either of them. A fundamental question is are these two study results really different? First and most importantly from a clinical perspective the trials do examine the same intervemntion and outcomes in a very similar populations. From a statistical perspective the results aren't radically different with overlapping 95% CIs. It is only if each trial is assessed with the inappropriate dichotomous statistical significance lens (p < or > 0.05) that the two trials appear different. The key insight being "In making a comparison between two treatments, one should look at the statistical significance of the difference rather than the difference between their significance levels[@RN5721]. The Bayesian statistical lens will sharpen this perspective.\    
+
+Clinicians are often faced with "conflicting" trial evidence. However if the trials are of equal high quality, often these conflicts are illusory arising from the improper comparisons of statistical significance. Systematic reviews and meta-analyses of prior evidence are now de riguer before a study is considered for peer review funding. Yet there is no similar mandate for evidence synthesis upon trial completion. Indeed current incentives strongly favor each trial being individually interpreted. However, as demonstrated in this example, this approach can lead to vacillating beliefs that do not respect the laws of probability and consequently may not align with the true state of knowledge. Bayesian techniques can address these issues thereby raising the quality of clinical trial interpretations.\   
+
+Consider the colchicine "believer" prior to CLEAR but not afterwards. If COLCOT was responsible for the initial positive prior belief, this analyse suggests after CLEAR there remains a 92% probability of decreased risk with colchicine, a 39% probability that the beenfit exceeds a 10% reduction. Of course, if a clinician has an clinical cutpoint for efficacy of RR \< 0.80 then it does indeed seem reasonable, based on the totality of the evidence to be a "non-believer" after CLEAR as the probability of a decrease in cardiovascular outcomes of this magnitude is less than 0-2%. However consistency would imply that their prior belief should also be referenced to a probability of RR \< 0.80 which for COLCOT was only 60% which seems a modest probability to have become an earlier "believer". This demonstrates that an intuitive reconciliation of prior and posterior beliefs can be difficult and is not facilitated by dichotomized reasoning. Moreover, clinicians may exhibit an availability bias whereby they are overly influenced by the last trial, particularly if they were intimately involved in it. The probabilistically correct harmonization of all available evidence with a Bayesian analysis can mininmize these cognitive errors and an increased emphasis on teaching these methods to clinicians would seem appropriate.\
+
+## Supplemental information
+
+There were no funding sources for this work.\     
+The code for these analyses can be found [https://github.com/brophyj/colchicine](https://github.com/brophyj/colchicine) \ 
+
+{{< pagebreak >}} \  
+
+## Figure 1
+
+![Figure 1 Three Priors and the Resulting Post-CLEAR Posterior Distributions](output/prior_posterior_plot_RR.png)  
+{{< pagebreak >}} \  
+
+## Figure 2
+
+![Figure 2 Forest Plot: Bayesian Meta-Analysis (Risk Ratios)](output/BMA_plot_CLEAR.png)  
+
+{{< pagebreak >}} \ 
+
+## Table 1
+
+![Table 1 Observed and Posterior (Shrunken) RRs with 95% CIs (Bayesian hierarchical model - pre-CLEAR)](output/summary_BMA7.png) 
+
+## Table 2
+
+![Table 2 Three Priors and the Resulting Post-CLEAR Posterior Distributions](output/summary_rr.png) 
+
+{{< pagebreak >}} \  
+
+## Table 3
+
+![Table 3 Observed and Posterior (Shrunken) RRs with 95% CIs (Bayesian hierarchical model)"](output/summary_BMA8.png) 
+
+## References

@@ -1,0 +1,228 @@
+---
+title: "Frequentist Meta-Analysis"
+author: 
+  - name: Jay Brophy
+    affiliation: McGill University
+    roles: conception, analysis, writing
+    orcid: 0000-0001-8049-6875
+    email: james.brophy@mcgill.ca
+    corresponding: true
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+format:
+  html:
+    code-fold: true
+    code-summary: "Show the code"
+    css: custom.scss
+  pdf:
+    toc: true
+    number-sections: true
+    latex-engine: pdflatex
+    colorlinks: true
+editor: source
+interactive: false
+bibliography: references.bib
+csl: vancouver.csl
+---
+
+# Introduction
+This program performs a frequentist random-effects meta-analysis using raw data from "pci_ma.csv" taken from Aw et. al [@RN32].\    
+It does a manual analysis as well as analysis using the `metafor` package. \    
+Both analyses include prediction intervals which was missing from the original publication[@RN32]. \     
+Prediction interval is computed using:
+$$\text{Prediction interval} = \hat{\theta} ± t_{0.975,\text{ df}} × sqrt(SE^2 + tau^2)$$
+where:\     
+$\hat{\theta}$  is the pooled log(RR),    \
+SE is its standard error, \     
+$\tau^2$ is the between-study variance, and \      
+$t_{0.975, df}$ is the critical value from the t-distribution with 
+k−2 degrees of freedom.\    
+
+The prediction interval is then back-transformed to the Risk Ratio (RR) scale.\     
+This program also generates a forest plot and summary table.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+suppressPackageStartupMessages({
+  library(readr)
+  library(ggplot2)
+  library(meta)
+  library(metafor)
+  library(dplyr)
+  library(knitr)
+})
+```
+
+
+# Read data 
+The data is from a systematic review and meta-analysis to study the effects of colchicine in patients with symptomatic coronary artery disease (CAD) who have undergone PCI and involves 
+7 randomised controlled trials including a total of 6660 patients (colchicine group: 3347, control group: 3313). \    
+Six studies included participants with a recent history of acute coronary syndrome
+(ACS) history ( ≤13.5-day to randomization). One study included patients with both ACS and
+chronic coronary syndromes. As is current ACS practice, all patients underwent PCI. \    
+This meta-analysis is of interest because it can serve as a reasonable informed prior to assist oin interpreting the recenlt published CLEAR trial[@CLEAR].
+
+```{r}
+df_raw <- read_csv("pci_ma.csv", show_col_types = FALSE)
+```
+
+#  Forest plot with prediction intervals 
+
+## With `metafor` package
+
+```{r fig.width=10}
+df_m <- meta::metabin(evt_trt, N_trt, evt_ctl, N_ctl, study, data=df_raw, sm="RR", 
+                      prediction=T, method = "Inverse")
+forest(df_m)
+ggsave("output/ma_freq_PI.png", dpi = 600)
+
+```
+This plot reproduces the published outcome of a reduction in MACE outcomes with colchicine  (risk ratio 0.73 (95% CI 0.61 to 0.87); p=0.0003) with minimal
+heterogeneity across the analysis (I2=6%; P for Cochran
+Q=0.38) and also includes a predictgion interval for the likely range of the next study.
+
+## With manual adjustments
+
+Although more complicated to perform this does offer the advantage of assuring increased comprehension and flexibility or customization, especially regarding the prediction intervals.\   
+
+First compute log risk ratio and standard error via the delta method
+
+```{r}
+df <- df_raw %>%
+  mutate(
+    p_t = evt_trt / N_trt,
+    p_c = evt_ctl / N_ctl,
+    log_rr = log(p_t / p_c),
+    se_rr = sqrt((1 - p_t) / (p_t * N_trt) + (1 - p_c) / (p_c * N_ctl))
+  )
+
+
+# Random-effects meta-analysis model
+res <- rma(yi = df$log_rr, sei = df$se_rr, method = "REML")
+
+```
+
+
+Prediction intervals altering the critical value distribution and value
+
+```{r}
+overall_est <- res$b[1]      # log scale
+se_overall  <- res$se[1]
+k_studies   <- res$k
+df_pi       <- k_studies - 2
+
+t_val <- qt(0.975, df = df_pi)  
+pred_lower_log <- overall_est - t_val * sqrt(se_overall^2 + res$tau2)
+pred_upper_log <- overall_est + t_val * sqrt(se_overall^2 + res$tau2)
+
+manual_pi_lower <- exp(pred_lower_log)
+manual_pi_upper <- exp(pred_upper_log)
+
+# Built-in predict()
+pred_obj <- predict(res, transf = exp)
+
+# Back-transform each study's effect
+study_RR       <- exp(res$yi)
+study_RR_lower <- exp(res$yi - 1.96 * sqrt(res$vi))
+study_RR_upper <- exp(res$yi + 1.96 * sqrt(res$vi))
+```
+
+
+
+
+## Construct data frame for forest plot
+Includes summary and prediction interval data
+
+```{r}
+df_forest <- data.frame(
+  Study = c(as.character(df_raw$study), "Overall", "Prediction"),
+  RR    = c(study_RR, exp(overall_est), exp(overall_est)),
+  Lower = c(study_RR_lower, exp(res$ci.lb), manual_pi_lower),
+  Upper = c(study_RR_upper, exp(res$ci.ub), manual_pi_upper)
+)
+
+# Factor the study column, placing "Overall" and "Prediction" at bottom
+df_forest$Study <- factor(df_forest$Study, levels = rev(unique(df_forest$Study)))
+
+# Create a concise label for "RR [95% CI]"
+df_forest <- df_forest %>%
+  mutate(
+    RR_95CI = sprintf("%.2f [%.2f, %.2f]", RR, Lower, Upper)
+  )
+
+# Position for the annotation text: 1.05 * max(Upper)
+# You can try 1.1, 1.15, etc. if you need more space
+max_x <- max(df_forest$Upper, na.rm = TRUE)
+x_text <- max_x * 1.05
+
+df_forest <- df_forest %>%
+  mutate(text_pos = x_text)
+
+
+saveRDS(df_forest[,-6], file = "output/ma_freq.rds")
+```
+`df_forest` is a data frame of the original data along with summary pooled estimate and the predicted interval that is wider than the one calculated withinb `metafor` as it uses a t  instead of a normal distribution and therefore has slightly wider tails. This is stored as an `R` object `ma_freq.rds`.
+
+## Custom ggplot forest
+
+```{r}
+forest_plot <- ggplot(df_forest, aes(x = RR, y = Study)) +
+  geom_point(size = 3) +
+  geom_errorbarh(aes(xmin = Lower, xmax = Upper), height = 0.2) +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  scale_x_log10() +
+  # "clip = 'off'" allows text to appear outside the main plotting panel
+  coord_cartesian(clip = "off") +
+  labs(
+    x = "Risk Ratio (RR)",
+    y = NULL,
+    title = "Forest Plot with Summary & Prediction Intervals",
+    subtitle = "Frequentist random effects model",
+    caption = "Overall: 95% CI of the pooled effect; Prediction: Manual 95% PI"
+  ) +
+  theme_minimal(base_size = 10) +
+  # Add right-side text for the effect label
+  geom_text(
+    aes(x = text_pos, label = RR_95CI),
+    hjust = 0, size = 3
+  ) +
+  # Add some right margin so the text won't be cut off
+  theme(
+    plot.margin = margin(t = 10, r = 60, b = 10, l = 10),
+    # Optionally shrink spacing between y-axis categories
+    axis.text.y = element_text(size = 10)
+  )
+
+# Print
+print(forest_plot)
+
+ggsave("output/ma_freq_PImanual.png", dpi = 600)
+```
+
+
+
+## Generate a summary table corresponding to the forest plot results
+
+```{r}
+table_results <- df_forest[,c(1,5)] 
+kable(table_results, digits = 2, caption = "Forest Plot Summary Table with Manual Prediction Interval")
+```
+
+# Discussion
+
+This successfully reproduces the previously published results[@RN32] showing a benefit for colchicine in ACS patients but also includes the previously missing prediction level for the next study. However, given the relatively small amount of between study heterogenity the prediction interval while wider than the pooled estimate interval still had an upper 95% condifence interval of 0.90, suggesting that the next study likely would have at least a 10% reduction in cardiovascular outcomes with colchicine.\
+If one believed this result, there is little justification to perform further clinical trials with colchicine in patients with established CAD. On the other hand, one could argue that by ignoring the uncertainty in estimating the model parameters one has severely underestimated the residual uncertainty regarding any colchicine benefit. Furthermore a different model for the between study variation with heavier tails than the current $t_{(n-k)df}$ choice would see the  95% CI upper limit for the prediction level approach or or exceed 1. For example the prediction interval using a critical value of $t_{0.975,3}$ or $t_{0.975,2}$ gives an upper limit of 95% CI for the predicted interval of 0.95 and 1.04, respectively. This analysis suggests that the reported conclusion[@RN32] "Colchicine significantly reduced the risk of
+MACE in patients with CAD" is not robust and that further evidence to clarify its utilituy was  indeed indicated.
+
+```{r}
+t_val <- qt(0.975, df = 2)  
+pred_lower_log <- overall_est - t_val * sqrt(se_overall^2 + res$tau2)
+pred_upper_log <- overall_est + t_val * sqrt(se_overall^2 + res$tau2)
+
+manual_pi_lower <- exp(pred_lower_log)
+manual_pi_upper <- exp(pred_upper_log)
+```
+
+# References
+
+

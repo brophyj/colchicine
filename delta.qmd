@@ -1,0 +1,82 @@
+---
+title: "delta method"
+editor: source
+---
+
+Below is an explanation of the delta method and some ideas on how to obtain “fatter-tailed” prediction intervals.
+
+---
+
+### The Delta Method
+
+The delta method is a technique used in statistics to approximate the variance (and thus the standard error) of a function of an estimator. It is based on a first-order Taylor series expansion. The idea is that if you have an estimator $\hat{\theta}$ for a parameter $\theta$, and you’re interested in a function $g(\theta)$, you can approximate the variance of $g(\hat{\theta})$ using the derivative of $g$ evaluated at the mean.
+
+**Basic Formula:**
+
+Suppose $\hat{\theta}$ is an estimator for $\theta$ with variance  $Var(\hat{\theta})$. For a function $g(\theta)$, the delta method gives
+
+$$
+\mathrm{Var}\bigl(g(\hat{\theta})\bigr) \approx \bigl[g'(\theta)\bigr]^2\,\mathrm{Var}(\hat{\theta}),$$
+
+where $g'(\theta)$ is the derivative of $g$ with respect to $\theta$.
+
+**Example in Meta-Analysis:**
+
+In your case, suppose you have the risk ratio (RR) defined as
+
+$$
+\text{RR} = \frac{p_t}{p_c},
+$$
+
+where $p_t = \frac{\text{evt_trt}}{N_{\text{trt}}}$ and $p_c = \frac{\text{evt_ctl}}{N_{\text{ctl}}})$. If you’re working on the log-scale,
+
+$$
+\log(\text{RR}) = \log(p_t) - \log(p_c),
+$$
+
+and you have estimates for $p_t$ and $p_c$ along with their variances (or standard errors), you can use the delta method to approximate the variance of $log(\text{RR})$. In our context, it leads to an expression like:
+
+$$
+\text{Var}\Bigl(\log(\text{RR})\Bigr) \approx \frac{1-p_t}{p_t\, N_{\text{trt}}} + \frac{1-p_c}{p_c\, N_{\text{ctl}}}
+$$
+
+Taking the square root provides the standard error for $log(\text{RR})$. (Notice that this expression is different from the variance formula for the log odds ratio.)
+
+---
+
+### Fatter Tails for the Prediction Interval
+
+In your meta-analysis, the prediction interval is computed on the log scale as
+
+\[
+\hat{\theta} \pm t_{0.975,\, k-2} \sqrt{\mathrm{SE}^2 + \tau^2},
+\]
+
+where:
+- $\hat{\theta}$ is the pooled log(RR),
+- $\mathrm{SE}$ is its standard error,
+- $\tau^2$ is the between-study variance, and
+- $t_{0.975,\, k-2}$ is the critical value from the t-distribution with k-2  degrees of freedom.
+
+If you believe this approach underestimates the uncertainty—perhaps because you want fatter tails for a more conservative prediction interval—you might consider a couple of alternatives:
+
+1. **Use a t-Distribution with Fewer Degrees of Freedom:**  
+   By using a t-distribution with lower degrees of freedom (or even switching to a Cauchy distribution, which is a t with 1 df), you introduce heavier tails. For example, instead of using df = k - 2, you might decide to use a fixed df (say 2 or 3) regardless of the number of studies. This would result in a larger critical value and thus a wider interval.
+
+2. **Employ a Robust or Heavy-Tailed Likelihood in a Bayesian Setting:**  
+   In Bayesian meta-analysis, one can replace the normal likelihood for the random effects with a t-distribution (with low degrees of freedom) to explicitly allow for heavier tails. This approach may be implemented in packages like **brms** or **RoBMA**, and it often results in wider prediction intervals because outlying study effects are accommodated more flexibly.
+
+3. **Bootstrap the Prediction Interval:**  
+   Alternatively, you could use a resampling approach (bootstrapping) to derive the prediction interval, which may capture tail behavior that the asymptotic t-approximation misses.
+
+---
+
+### Summary
+
+- **Delta Method:**  
+  This method approximates the variance of a transformed estimator by taking the square of the derivative of the transformation function (evaluated at the point estimate) times the variance of the original estimator. It’s widely used in meta-analysis to approximate the variance of log(RR) from the variance of the underlying proportions.
+
+- **Fatter Tails:**  
+  If you want a wider prediction interval reflecting heavier-tailed uncertainty, you might choose to use a t-distribution with fewer degrees of freedom (or even switch to a Cauchy distribution in a Bayesian framework) in the prediction interval calculation. This increases the critical value used in the interval formula, thereby widening the prediction interval.
+
+These methods can provide a more conservative prediction interval when you suspect that variability or outliers may be underrepresented by the standard normal or t-distribution assumptions.

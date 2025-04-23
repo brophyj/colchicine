@@ -1,0 +1,184 @@
+---
+title: "CLEAR Update Using Binomial Likelihood"
+author: 
+  - name: Jay Brophy
+    affiliation: McGill University
+    roles: conception, analysis, writing
+    orcid: 0000-0001-8049-6875
+    email: james.brophy@mcgill.ca
+    corresponding: true
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+format:
+  html:
+    code-fold: true
+    code-summary: "Show the code"
+    css: custom.scss
+  pdf:
+    toc: true
+    number-sections: false
+    latex-engine: pdflatex
+    colorlinks: true
+editor: source
+interactive: false
+bibliography: references.bib
+csl: vancouver.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+suppressPackageStartupMessages({
+  library(cmdstanr)
+  library(ggplot2)
+  library(dplyr)
+  library(posterior)
+  library(tibble)
+  library(ggdist)
+  library(bayesplot)
+})
+```
+
+# Data and Prior Specification
+
+```{r}
+n1 <- 3528; e1 <- 322
+n2 <- 3534; e2 <- 327
+
+# Load meta-analysis results
+df_forest <- readRDS("output/ma_freq.rds")
+
+sigma_from_ci <- function(lower, upper) {
+  (log(upper) - log(lower)) / (2 * qnorm(0.975))
+}
+
+mu_meta <- log(df_forest[8, "RR"])
+sigma_meta <- sigma_from_ci(df_forest[8, "Lower"], df_forest[8, "Upper"])
+
+mu_colcot <- log(df_forest[3, "RR"])
+sigma_colcot <- sigma_from_ci(df_forest[3, "Lower"], df_forest[3, "Upper"])
+
+mu_weak <- 0
+sigma_weak <- 2
+```
+
+# Stan Model
+
+```{r}
+rr_stan_code <- c(
+  "data {",
+  "  int<lower=0> n1;",
+  "  int<lower=0> e1;",
+  "  int<lower=0> n2;",
+  "  int<lower=0> e2;",
+  "  real mu_prior;",
+  "  real<lower=0> sigma_prior;",
+  "}",
+  "parameters {",
+  "  real<lower=0,upper=1> p_raw;",
+  "  real delta;",
+  "}",
+  "transformed parameters {",
+  "  real p = fmin(p_raw, 0.999);",
+  "  real p1 = p * exp(delta);",
+  "}",
+  "model {",
+  "  delta ~ normal(mu_prior, sigma_prior);",
+  "  e1 ~ binomial(n1, fmin(p1, 0.999));",
+  "  e2 ~ binomial(n2, p);",
+  "}"
+)
+writeLines(rr_stan_code, "model/clear_binomial.stan")
+mod <- cmdstan_model("model/clear_binomial.stan")
+```
+
+# Run Models
+
+```{r}
+data_meta <- list(n1 = n1, e1 = e1, n2 = n2, e2 = e2, mu_prior = mu_meta, sigma_prior = sigma_meta)
+data_weak <- list(n1 = n1, e1 = e1, n2 = n2, e2 = e2, mu_prior = mu_weak, sigma_prior = sigma_weak)
+data_colcot <- list(n1 = n1, e1 = e1, n2 = n2, e2 = e2, mu_prior = mu_colcot, sigma_prior = sigma_colcot)
+
+fit_meta <- mod$sample(data = data_meta, chains = 4, iter_sampling = 2000, refresh = 0)
+fit_weak <- mod$sample(data = data_weak, chains = 4, iter_sampling = 2000, refresh = 0)
+fit_colcot <- mod$sample(data = data_colcot, chains = 4, iter_sampling = 2000, refresh = 0)
+```
+
+# Diagnostics {.unnumbered}
+
+```{r}
+fit_meta$print()
+fit_weak$print()
+fit_colcot$print()
+
+mcmc_trace(fit_meta$draws("delta"))
+mcmc_trace(fit_weak$draws("delta"))
+mcmc_trace(fit_colcot$draws("delta"))
+```
+
+# Posterior Risk Ratio Distribution
+
+```{r}
+draws_binom <- bind_rows(
+  tibble(RR = exp(as_draws_df(fit_meta$draws("delta"))$delta), prior = "Meta-analysis prior"),
+  tibble(RR = exp(as_draws_df(fit_weak$draws("delta"))$delta), prior = "Weak prior"),
+  tibble(RR = exp(as_draws_df(fit_colcot$draws("delta"))$delta), prior = "COLCOT prior")
+)
+
+ggplot(draws_binom, aes(x = RR, fill = prior, color = prior)) +
+  stat_slabinterval(aes(thickness = after_stat(pdf)), .width = 0.95, alpha = 0.6, position = "identity") +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  labs(title = "Posterior Risk Ratios (RR) under Binomial Likelihood",
+       x = "Risk Ratio (RR)", y = "Density") +
+  theme_minimal()
+```
+
+# Summary Table {.unnumbered}
+
+```{r}
+summary_binom <- draws_binom %>%
+  group_by(prior) %>%
+  summarise(
+    Mean = round(mean(RR), 2),
+    Lower = round(quantile(RR, 0.025), 2),
+    Upper = round(quantile(RR, 0.975), 2),
+    `P(RR < 0.8)` = round(mean(RR < 0.8), 2),
+    `P(RR < 0.9)` = round(mean(RR < 0.9), 2),
+    `P(RR < 1.0)` = round(mean(RR < 1.0), 2),
+    CrI = sprintf("%.2f [%.2f, %.2f]", mean(RR), quantile(RR, 0.025), quantile(RR, 0.975))
+  )
+
+knitr::kable(summary_binom, caption = "Posterior Risk Ratio (RR) summaries for CLEAR under Binomial Model")
+```
+
+# Posterior Predictive Intervals {.unnumbered}
+
+```{r}
+baseline <- e2 / n2
+n_future <- n2
+
+# simulate predictive event counts
+set.seed(123)
+delta_draws <- as_draws_df(fit_meta$draws("delta"))$delta
+rr_draws <- exp(delta_draws)
+p_treatment <- pmin(pmax(baseline * rr_draws, 1e-4), 0.9999)
+p_control <- rep(baseline, length(p_treatment))
+
+e_future_control <- rbinom(length(p_control), n_future, p_control)
+e_future_treatment <- rbinom(length(p_treatment), n_future, p_treatment)
+pred_rr <- pmin(pmax(e_future_treatment / e_future_control, 0.01), 5)
+
+# Plot
+library(ggplot2)
+ggplot(data.frame(pred_rr), aes(x = pred_rr)) +
+  geom_histogram(bins = 50, fill = "purple", alpha = 0.7) +
+  geom_vline(xintercept = 1.0, linetype = "dashed") +
+  labs(
+    x = "Predicted RR",
+    y = "Density",
+    title = "Posterior Predictive Distribution of RR (Future Trial)"
+  ) +
+  theme_minimal()
+```
+
+# Discussion {.unnumbered}
+
+As expected, given the large sample sizes and the proportions being removed from the extremes (0 or 1), the normal and binomial model give exactly the same result.

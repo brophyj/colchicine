@@ -1,0 +1,256 @@
+---
+title: "Bayesian Meta-Analysis with CLEAR data"
+author: 
+  - name: Jay Brophy
+    affiliation: McGill University
+    roles: conception, analysis, writing
+    orcid: 0000-0001-8049-6875
+    email: james.brophy@mcgill.ca
+    corresponding: true
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+format:
+  html:
+    code-fold: true
+    code-summary: "Show the code"
+    css: custom.scss
+  pdf:
+    toc: true
+    number-sections: true
+    latex-engine: pdflatex
+    colorlinks: true
+editor: source
+interactive: false
+bibliography: references.bib
+csl: vancouver.csl
+---
+
+```{r setup, include=FALSE}
+# Set global options for chunk outputs
+knitr::opts_chunk$set(
+  message = FALSE,  # Hide messages
+  warning = FALSE,  # Hide warnings
+  echo = FALSE,      # Show code
+  eval = TRUE,      # Ensure code is evaluated
+  comment = NA,     # Suppress "In [1]:" or similar prompts
+  include = FALSE,
+  results = "markup" # Ensure output is rendered as markup, not interactive ?"asis"
+)
+
+suppressPackageStartupMessages({
+  library(cmdstanr)
+  library(ggplot2)
+  library(ggdist)
+  library(dplyr)
+  library(posterior)
+})
+
+library(tidyverse, quietly = T)
+library(magrittr, quietly = T)
+library(cmdstanr, quietly = T)
+library(bayesplot,quietly = T)
+library(lme4, quietly = T)
+library(posterior, quietly = T)
+library(brms, quietly = T)
+```
+
+# Data
+
+Data will include 7 studies from the previous meta-analysis[@RN32] as well as the CLEAR[@CLEAR] data\   
+
+```{r}
+df_forest <- readRDS("output/ma_freq.rds") # read in previous MA data from 00_ program
+
+ma_8 <- bind_rows(
+  tibble(Study = df_forest$Study[c(1:7)], RR = df_forest$RR[c(1:7)], 
+         Lower= df_forest$Lower[c(1:7)], Upper = df_forest$Upper[c(1:7)]),
+  tibble(Study = "CLEAR", RR = 0.99, Lower = 0.85, Upper = 1.16)
+)
+
+se_UL <- function(upper, lower) {
+  (upper - lower) / (2 * qnorm(0.975))
+}
+
+```
+
+# Stan model
+
+The Stan model is the same as the hierarchical model used in file `01_meta_analysis_bayes.qmd` but now with 8 instead of 7 trials
+```{r}
+se_ma <- se_UL(ma_8$Upper, ma_8$Lower)
+log_rr <- log(ma_8$RR)
+study_labels <- ma_8$Study
+data_list <- list(J = length(log_rr), y = log_rr, sigma = se_ma)
+
+mod <- cmdstan_model('model/meta_model.stan')
+fit <- mod$sample(data = data_list, chains = 4, iter_warmup = 1000,  seed = 1234, 
+                  iter_sampling = 2000, refresh = 0)
+
+draws <- as_draws_df(fit$draws("mu"))
+```
+
+
+```{r}
+# Plot posterior using updated ggdist syntax
+ggplot(draws, aes(x = mu)) +
+  stat_slabinterval(aes(thickness = after_stat(pdf)), .width = 0.95, fill = 'steelblue') +
+  geom_vline(xintercept = 0, linetype = 'dashed') +
+  labs(title = 'Posterior of Overall log(RRR)', x = 'log(RRR)', y = 'Density') +
+  theme_minimal()
+
+# older version - works with messages
+# ggplot(draws, aes(x = mu)) +
+#  stat_halfeye(.width = 0.95, fill = "steelblue", slab_type = "pdf", normalize = "panels") +
+#  geom_vline(xintercept = 0, linetype = 'dashed') +
+#  labs(title = "Posterior of Overall log(OR)", x = "log(OR)", y = "Density") +
+#  theme_minimal()
+
+# another similar methods
+ggplot(draws, aes(x = mu)) +
+  stat_density(geom = "area", fill = "steelblue", alpha = 0.6, bw = 0.05) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  labs(title = "Posterior of Overall log(RR)",
+       x = "log(RR)",
+       y = "Density") +
+  theme_minimal()
+
+```
+
+```{r}
+# Draws for each theta and mu
+theta_draws <- as_draws_df(fit$draws(c("mu", "theta")))
+
+# 95% CI for observed RR
+obs_lower <- exp(log_rr - 1.96 * se_ma)
+obs_upper <- exp(log_rr + 1.96 * se_ma)
+
+# Posterior mean and 95% CI for each study
+post_rr_mean <- sapply(1:8, function(i) mean(exp(theta_draws[[paste0("theta[", i, "]")]])))
+post_rr_lower <- sapply(1:8, function(i) quantile(exp(theta_draws[[paste0("theta[", i, "]")]]), 0.025))
+post_rr_upper <- sapply(1:8, function(i) quantile(exp(theta_draws[[paste0("theta[", i, "]")]]), 0.975))
+
+# Overall posterior mean and CI
+overall_rr <- exp(theta_draws$mu)
+overall_rr_mean <- mean(overall_rr)
+overall_rr_ci <- quantile(overall_rr, probs = c(0.025, 0.975))
+
+# Predictive RR
+mu_vals <- theta_draws$mu
+tau_vals <- as_draws_df(fit$draws("tau"))$tau
+set.seed(123)
+pred_draws <- rnorm(4000, mu_vals, tau_vals)
+pred_rr <- exp(pred_draws)
+pred_rr_mean <- mean(pred_rr)
+pred_rr_ci <- quantile(pred_rr, probs = c(0.025, 0.975))
+
+# Final table
+
+rr_table <- data.frame(
+  Study = c(study_labels, "Overall", "Predicted"),
+  Observed_RR = c(round(exp(log_rr), 2), NA, NA),
+  CI_Observed = c(sprintf("%.2f–%.2f", obs_lower, obs_upper), "", ""),
+  Shrunken_RR = c(round(post_rr_mean, 2), round(overall_rr_mean, 2), round(pred_rr_mean, 2)),
+  CrI_Shrunken = c(
+    sprintf("%.2f–%.2f", post_rr_lower, post_rr_upper),
+    sprintf("%.2f–%.2f", overall_rr_ci[1], overall_rr_ci[2]),
+    sprintf("%.2f–%.2f", pred_rr_ci[1], pred_rr_ci[2])
+  )
+)
+
+knitr::kable(rr_table, digits = 2, caption = "Observed and Posterior (Borrowed) RRs with 95% CIs")
+```
+
+
+```{r save-table3}
+#| echo: false
+#| include: false
+#| message: false
+#| warning: false
+
+library(kableExtra)
+tbl_8 <- kbl(
+  rr_table,
+  caption = "Observed and Posterior (Shrunken) RRs with 95% CrIs (Bayesian hierarchical model - post-CLEAR)",
+  format  = "html"
+) %>%
+  kable_styling(
+    bootstrap_options = c("striped","hover","condensed","responsive"),
+    full_width        = FALSE,
+    position          = "center"
+  )
+
+# save the PNG — nothing from this chunk (code, messages, warnings)
+# will ever show up in your doc
+save_kable(tbl_8, "output/summary_BMA8.png", zoom = 2, quiet = TRUE)
+```
+
+
+```{r}
+#| echo: false
+knitr::include_graphics("output/summary_BMA8.png")
+
+```
+
+```{r warning=FALSE}
+# Forest plot
+plot_data <- data.frame(
+  Study = factor(c(study_labels, "Overall", "Predicted"), levels = rev(c(study_labels, "Overall", "Predicted"))),
+  Observed_RR = c(round(exp(log_rr), 2), NA, NA),
+  Observed_Lower = c(obs_lower, NA, NA),
+  Observed_Upper = c(obs_upper, NA, NA),
+  Borrowed_RR = c(post_rr_mean, overall_rr_mean, pred_rr_mean),
+  Borrowed_Lower = c(post_rr_lower, overall_rr_ci[1], pred_rr_ci[1]),
+  Borrowed_Upper = c(post_rr_upper, overall_rr_ci[2], pred_rr_ci[2])
+)
+
+ggplot(plot_data) +
+  geom_point(aes(x = Observed_RR, y = Study), color = "blue") +
+  geom_errorbarh(aes(xmin = Observed_Lower, xmax = Observed_Upper, y = Study), height = 0.2, color = "blue") +
+  geom_point(aes(x = Borrowed_RR, y = Study), color = "red") +
+  geom_errorbarh(aes(xmin = Borrowed_Lower, xmax = Borrowed_Upper, y = Study), height = 0.2, color = "red") +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  scale_x_continuous(trans = "log", breaks = c(0.5, 0.75, 1, 1.5, 2)) +
+  labs(
+    title = "Forest Plot: Bayesian Meta-Analysis (Risk Ratios) post-CLEAR",
+    x = "Risk Ratio (RR)", y = NULL,
+    caption = "Blue = Observed Risk Ratio \nRed = Posterior (shruken) Risk Ratio"
+  ) +
+  theme_minimal()
+
+ggsave("output/BMA_plot_CLEAR.png")
+```
+
+# Posterior Predictive Intervals {.unnumbered}
+
+```{r}
+pred_summary <- data.frame(
+  prior = c("Meta-analysis prior"),
+  `Predictive 2.5%` = round(pred_rr_ci[1], 2),
+  `Predictive 97.5%` = round(pred_rr_ci[2], 2)
+)
+
+knitr::kable(pred_summary, caption = "Posterior Predictive Intervals for Risk Ratio in a Future Study under Meta-Analysis Prior")
+
+
+```
+
+# Discussion {.unnumbered}
+
+This analysis contrasts two Bayesian strategies:
+
+**File 02** uses a *sequential Bayesian updating approach*, where the CLEAR trial is analyzed assuming a normal likelihood and incorporating three distinct priors: a weak prior, an optimistic prior (COLCOT), and a meta-analysis prior derived from earlier studies. Although this model does not include an explicit `tau` parameter (between-study heterogeneity), it does **implicitly account for τ** when using the meta-analysis prior, since that prior was generated by integrating over the joint posterior distribution of μ and τ from a previous hierarchical model. Thus, τ is **not ignored**, but rather **marginalized over and embedded within the prior**.
+
+**File 03** adopts a *Bayesian hierarchical meta-analysis* approach, simultaneously estimating μ and τ using data from all 8 trials. It directly models the between-study heterogeneity and uses the posterior predictive distribution to forecast the outcome of a future study.
+
+| Feature                     | Sequential Update (File 02)                             | Hierarchical Meta-Analysis (File 03)                   |
+|----------------------------|---------------------------------------------------------|--------------------------------------------------------|
+| **What is estimated?**     | Posterior effect in the CLEAR trial                    | Predictive RR for a new trial                         |
+| **Uncertainty in τ**       | Carried via meta-analysis prior (integrated)           | Modeled explicitly in the likelihood                   |
+| **Inference type**         | Conditional on CLEAR + prior                           | Marginal predictive over all trials                   |
+| **Interval width**         | Narrower (e.g. 0.86 [0.77, 0.96])                      | Wider (0.84 [0.63, 1.08]) due to τ + sampling         |
+| **Interpretability**       | Trial-specific (CLEAR)                                 | Generalizable, forward-looking                        |
+| **Usefulness for policy**  | Prior-sensitive, easier to communicate                | Stronger for planning, forecasting, synthesis         |
+
+In summary, the sequential update approach is well-suited to interpret a single trial in light of prior beliefs, while the hierarchical model offers a more conservative, realistic assessment of what might happen in future studies. Ideally, both should be reported in tandem.
+
+
+# References
