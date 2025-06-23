@@ -1,0 +1,58 @@
+---
+title: "Comparison of Sequential and Hierarchical Bayesian Approaches"
+author: 
+  - name: Jay Brophy
+    affiliation: McGill University
+    roles: conception, analysis, writing
+    orcid: 0000-0001-8049-6875
+    email: james.brophy@mcgill.ca
+    corresponding: true
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+format:
+  html:
+    toc: true
+    number-sections: true
+  pdf:
+    toc: true
+    number-sections: true
+---
+
+# Background
+
+This report compares two Bayesian approaches applied to data from the CLEAR trial:
+
+1. **Sequential Bayesian updating** (File 02)
+2. **Bayesian hierarchical meta-analysis** (File 03)
+
+# Posterior Risk Ratio for CLEAR Trial (Sequential)
+
+| Prior               | Mean | Lower | Upper | P(RR < 0.8) | P(RR < 0.9) | P(RR < 1.0) | CrI              |
+|---------------------|------|-------|-------|-------------|-------------|-------------|------------------|
+| COLCOT prior        | 0.92 | 0.81  | 1.04  | 0.01        | 0.39        | 0.91        | 0.92 [0.81, 1.04] |
+| Meta-analysis prior | 0.86 | 0.77  | 0.96  | 0.09        | 0.78        | 1.00        | 0.86 [0.77, 0.96] |
+| Weak prior          | 0.99 | 0.85  | 1.15  | 0.00        | 0.11        | 0.57        | 0.99 [0.85, 1.15] |
+
+# Posterior Predictive RR (Hierarchical Meta-Analysis)
+
+| Prior               | Mean | Lower | Upper | P(RR < 0.8) | P(RR < 0.9) | P(RR < 1.0) | CrI              |
+|---------------------|------|-------|-------|-------------|-------------|-------------|------------------|
+| Meta-analysis prior | 0.83 | 0.61  | 1.09  | 0.40        | 0.71        | 0.92        | 0.83 [0.61, 1.09] |
+
+# Comparison and Interpretation
+
+| Feature                     | Sequential Update (File 02)                             | Hierarchical Meta-Analysis (File 03)                   |
+|----------------------------|---------------------------------------------------------|--------------------------------------------------------|
+| **What is estimated?**     | Posterior effect in the CLEAR trial                    | Predictive RR for a new trial                         |
+| **Uncertainty in τ**       | Carried via meta-analysis prior (integrated)           | Modeled explicitly in the likelihood                   |
+| **Inference type**         | Conditional on CLEAR + prior                           | Marginal predictive over all trials                   |
+| **Interval width**         | Narrower (e.g. 0.86 [0.77, 0.96])                      | Wider (0.84 [0.63, 1.08]) due to τ + sampling         |
+| **Interpretability**       | Trial-specific (CLEAR)                                 | Generalizable, forward-looking                        |
+| **Usefulness for policy**  | Prior-sensitive, easier to communicate                | Stronger for planning, forecasting, synthesis         |
+
+# Recommendation
+
+Use **sequential updating** when interpreting new trial results like CLEAR, particularly to explore sensitivity to prior assumptions.
+
+Use **hierarchical models** for forward-looking tasks like trial design, replication planning, or policy inference.
+
+Ideally, both should be presented side-by-side to contextualize current evidence while informing future expectations.
